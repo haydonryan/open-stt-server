@@ -3,6 +3,7 @@ FROM rust:alpine AS builder
 
 RUN apk add --no-cache \
         musl-dev \
+        g++ \
         pkgconfig \
         git \
         ca-certificates \
