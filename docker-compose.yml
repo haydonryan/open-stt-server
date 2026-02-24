@@ -1,0 +1,49 @@
+services:
+  # Debian-slim variant (default, better compatibility)
+  open-stt-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.debian
+    image: open-stt-server:debian
+    ports:
+      - "${OPEN_STT_PORT:-8080}:8080"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    environment:
+      OPEN_STT_PORT: "8080"
+      OPEN_STT_MODELS: "${OPEN_STT_MODELS:-whisper-base}"
+      OPEN_STT_DOWNLOAD: "${OPEN_STT_DOWNLOAD:-true}"
+      OPEN_STT_DEFAULT_MODEL: "${OPEN_STT_DEFAULT_MODEL:-}"
+      OPEN_STT_FORCE_CPU: "${OPEN_STT_FORCE_CPU:-false}"
+      OPEN_STT_API_KEY: "${OPEN_STT_API_KEY:-}"
+      RUST_LOG: "${RUST_LOG:-info}"
+    restart: unless-stopped
+    profiles:
+      - debian
+      - default
+
+  # Alpine variant (smaller image)
+  open-stt-server-alpine:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    image: open-stt-server:alpine
+    ports:
+      - "${OPEN_STT_PORT:-8080}:8080"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    environment:
+      OPEN_STT_PORT: "8080"
+      OPEN_STT_MODELS: "${OPEN_STT_MODELS:-whisper-base}"
+      OPEN_STT_DOWNLOAD: "${OPEN_STT_DOWNLOAD:-true}"
+      OPEN_STT_DEFAULT_MODEL: "${OPEN_STT_DEFAULT_MODEL:-}"
+      OPEN_STT_FORCE_CPU: "${OPEN_STT_FORCE_CPU:-false}"
+      OPEN_STT_API_KEY: "${OPEN_STT_API_KEY:-}"
+      RUST_LOG: "${RUST_LOG:-info}"
+    restart: unless-stopped
+    profiles:
+      - alpine
+
+volumes:
+  hf_cache:
+    driver: local

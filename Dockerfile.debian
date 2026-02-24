@@ -1,0 +1,46 @@
+# ─── Stage 1: Builder ────────────────────────────────────────────────────────
+FROM rust:slim-bookworm AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        pkg-config \
+        git \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy manifests first to cache dependency compilation
+COPY Cargo.toml Cargo.lock ./
+
+# Create a dummy binary so cargo can resolve and compile all dependencies
+# before the real source is copied in (improves layer caching).
+RUN mkdir -p src \
+    && echo 'fn main() {}' > src/main.rs \
+    && cargo build --release 2>/dev/null || true \
+    && rm -rf src
+
+# Copy real source and build
+COPY src ./src
+RUN touch src/main.rs \
+    && cargo build --release
+
+# ─── Stage 2: Runtime ────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/target/release/open-stt-server /usr/local/bin/open-stt-server
+
+# HuggingFace model cache — mount a volume here to persist downloads
+VOLUME ["/root/.cache/huggingface"]
+
+ENV OPEN_STT_PORT=8080 \
+    OPEN_STT_MODELS=whisper-base \
+    OPEN_STT_DOWNLOAD=true \
+    RUST_LOG=info
+
+EXPOSE 8080
+
+ENTRYPOINT ["open-stt-server"]
