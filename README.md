@@ -156,6 +156,9 @@ cargo build --release --features cuda,cudnn
 
 # With flash-attention (requires CUDA)
 cargo build --release --features cuda,flash-attn
+
+# With Metal support (Apple Silicon)
+cargo build --release --features metal
 ```
 
 ### Run
@@ -179,6 +182,8 @@ OPEN_STT_API_KEY=secret ./target/release/open-stt-server --model whisper-small -
 ---
 
 ## Docker
+
+> **Note:** Metal (Apple Silicon GPU) acceleration is not available in Docker. macOS Docker does not support GPU passthrough for Metal. To use Metal acceleration, build and run natively on macOS with `--features metal`.
 
 Two image variants are provided.
 
