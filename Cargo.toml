@@ -1,0 +1,56 @@
+[package]
+name = "open-stt-server"
+version = "0.1.0"
+edition = "2024"
+description = "A Whisper-compatible STT API server"
+
+[[bin]]
+name = "open-stt-server"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["trace", "cors"] }
+
+# CLI & config
+clap = { version = "4", features = ["derive", "env"] }
+
+# ML Framework (candle)
+candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main" }
+candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main" }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main" }
+
+# Tokenizers
+tokenizers = "0.22"
+tekken-rs = "0.1"
+
+# Audio processing
+rubato = "0.16"
+symphonia = { version = "0.5", features = ["all"] }
+
+# Utilities
+anyhow = "1"
+byteorder = "1"
+dirs = "6"
+futures = "0.3"
+log = "0.4"
+env_logger = "0.11"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+ring = "0.17"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio-util = "0.7"
+uuid = { version = "1", features = ["v4"] }
+
+[features]
+default = []
+cuda = ["candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
+cudnn = ["candle-core/cudnn"]
+flash-attn = ["candle-transformers/flash-attn", "dep:candle-flash-attn"]
+
+[dependencies.candle-flash-attn]
+git = "https://github.com/huggingface/candle.git"
+branch = "main"
+optional = true
