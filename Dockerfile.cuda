@@ -1,0 +1,56 @@
+# ─── Stage 1: Builder ────────────────────────────────────────────────────────
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
+
+# Install Rust and build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        g++ \
+        pkg-config \
+        git \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /build
+
+# Copy manifests first to cache dependency compilation
+COPY Cargo.toml Cargo.lock ./
+
+# Create a dummy binary so cargo can resolve and compile all dependencies
+# before the real source is copied in (improves layer caching).
+RUN mkdir -p src \
+    && echo 'fn main() {}' > src/main.rs \
+    && cargo build --release --features cuda 2>/dev/null || true \
+    && rm -rf src
+
+# Copy real source and build with CUDA support
+# CUDA_COMPUTE_CAP is needed since GPU isn't available during build
+COPY src ./src
+ARG CUDA_COMPUTE_CAP=86
+ENV CUDA_COMPUTE_CAP=${CUDA_COMPUTE_CAP}
+RUN touch src/main.rs \
+    && cargo build --release --features cuda
+
+# ─── Stage 2: Runtime ────────────────────────────────────────────────────────
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/target/release/open-stt-server /usr/local/bin/open-stt-server
+
+# HuggingFace model cache — mount a volume here to persist downloads
+VOLUME ["/root/.cache/huggingface"]
+
+ENV OPEN_STT_PORT=8080 \
+    OPEN_STT_MODELS=whisper-base \
+    OPEN_STT_DOWNLOAD=true \
+    RUST_LOG=info
+
+EXPOSE 8080
+
+ENTRYPOINT ["open-stt-server"]
