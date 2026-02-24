@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Error, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
-use candle_core::{DType, Device, Tensor, utils};
+use candle_core::{DType, Device, Tensor};
+use candle_core::utils::{cuda_is_available, metal_is_available};
 use candle_nn::VarBuilder;
 use candle_transformers::models::voxtral::{
     VoxtralCache, VoxtralConfig, VoxtralEncoderConfig, VoxtralForConditionalGeneration,
@@ -31,15 +32,17 @@ impl VoxtralModel {
     pub fn new(stt_model: &STTModel, force_cpu: bool) -> Result<Self> {
         info!("Loading Voxtral {stt_model:?} model...");
 
-        let device = if !force_cpu && utils::cuda_is_available() {
+        let device = if force_cpu {
+            info!("Using CPU (forced by user)");
+            Device::Cpu
+        } else if metal_is_available() {
+            info!("Using Metal device (Apple Silicon)");
+            Device::new_metal(0).context("Failed to create Metal device")?
+        } else if cuda_is_available() {
             info!("Using CUDA device");
             Device::new_cuda(0).context("Failed to create CUDA device")?
         } else {
-            if force_cpu {
-                info!("Using CPU (forced by user)");
-            } else {
-                info!("Using CPU (CUDA not available)");
-            }
+            info!("Using CPU (no GPU acceleration available)");
             Device::Cpu
         };
 

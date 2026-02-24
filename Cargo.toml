@@ -48,6 +48,7 @@ uuid = { version = "1", features = ["v4"] }
 default = []
 cuda = ["candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
 cudnn = ["candle-core/cudnn"]
+metal = ["candle-core/metal", "candle-nn/metal", "candle-transformers/metal"]
 flash-attn = ["candle-transformers/flash-attn", "dep:candle-flash-attn"]
 
 [dependencies.candle-flash-attn]
