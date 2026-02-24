@@ -244,18 +244,23 @@ Model weights are stored in a named Docker volume (`hf_cache`) and survive conta
 
 Models are cached in the standard HuggingFace Hub layout at `~/.cache/huggingface/hub/` (or `/root/.cache/huggingface/hub/` inside Docker). Once downloaded, they are reused on subsequent starts without re-downloading.
 
-Approximate download sizes:
+Approximate download sizes and VRAM requirements:
 
-| Model | Size |
-|---|---|
-| whisper-tiny | ~150 MB |
-| whisper-base | ~290 MB |
-| whisper-small | ~970 MB |
-| whisper-medium | ~3 GB |
-| whisper-large-v3 | ~6 GB |
-| whisper-large-v3-turbo | ~3 GB |
-| voxtral-mini | ~6 GB |
-| voxtral-small | ~47 GB |
+| Model | Download Size | Est. VRAM |
+|---|---|---|
+| whisper-tiny | ~150 MB | ~0.5 GB |
+| whisper-base | ~290 MB | ~0.8 GB |
+| whisper-small | ~970 MB | ~2 GB |
+| whisper-medium | ~3 GB | ~5-6 GB |
+| whisper-large-v3 | ~6 GB | ~10-12 GB |
+| whisper-large-v3-turbo | ~3 GB | ~5-6 GB |
+| whisper-distil-medium.en | ~1.5 GB | ~3 GB |
+| whisper-distil-large-v2 | ~3 GB | ~5-6 GB |
+| whisper-distil-large-v3 | ~3 GB | ~5-6 GB |
+| voxtral-mini | ~6 GB | ~10-14 GB |
+| voxtral-small | ~47 GB | ~50-60 GB |
+
+> **Note:** VRAM estimates include overhead for activations and KV cache during inference. Actual usage varies with audio length. Voxtral-small requires a GPU with at least 60GB VRAM.
 
 ---
 
