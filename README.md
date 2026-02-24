@@ -254,6 +254,6 @@ Approximate download sizes:
 
 ---
 
-## License
+## Disclaimer
 
-MIT
+This project was made with the help of AI but tested with love. Issues and bug reports welcome!
