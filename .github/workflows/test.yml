@@ -1,0 +1,77 @@
+name: Test
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  CLICOLOR: 1
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "macos-latest"]
+        rust: ["stable", "beta"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      - name: Print Cargo Version
+        run: cargo -V
+      - name: Default features
+        run: cargo test --workspace
+      - name: No-default features
+        run: cargo test --workspace --no-default-features
+      - name: Install Tarpaulin
+        if: runner.os == 'Linux'
+        run: cargo install cargo-tarpaulin
+      - name: Test Coverage
+        if: runner.os == 'Linux'
+        run: cargo tarpaulin #--fail-under 80
+
+  Lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+      - name: Print Cargo Version
+        run: cargo -V
+      - name: clippy
+        run: cargo clippy --verbose -- -D warnings
+
+  Security:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Print Cargo Version
+        run: cargo -V
+      - name: Security Check
+        run: cargo audit
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check bans sources advisories
