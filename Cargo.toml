@@ -18,9 +18,9 @@ tower-http = { version = "0.6", features = ["trace", "cors"] }
 clap = { version = "4", features = ["derive", "env"] }
 
 # ML Framework (candle)
-candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main" }
-candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main" }
-candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main" }
+candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true }
+candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true }
 
 # Tokenizers
 tokenizers = "0.22"
@@ -45,11 +45,12 @@ tokio-util = "0.7"
 uuid = { version = "1", features = ["v4"] }
 
 [features]
-default = []
-cuda = ["candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
-cudnn = ["candle-core/cudnn"]
-metal = ["candle-core/metal", "candle-nn/metal", "candle-transformers/metal"]
-flash-attn = ["candle-transformers/flash-attn", "dep:candle-flash-attn"]
+default = ["candle"]
+candle = ["dep:candle-core", "dep:candle-nn", "dep:candle-transformers"]
+cuda = ["candle", "candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
+cudnn = ["candle", "candle-core/cudnn"]
+metal = ["candle", "candle-core/metal", "candle-nn/metal", "candle-transformers/metal"]
+flash-attn = ["candle", "candle-transformers/flash-attn", "dep:candle-flash-attn"]
 
 [dependencies.candle-flash-attn]
 git = "https://github.com/huggingface/candle.git"
