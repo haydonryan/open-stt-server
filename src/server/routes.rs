@@ -230,3 +230,55 @@ pub async fn list_models(
 pub async fn health() -> impl IntoResponse {
     Json(json!({"status": "ok"}))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::HeaderValue;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    fn state_with_key(api_key: Option<&str>) -> AppState {
+        let models: HashMap<String, crate::models::SharedModel> = HashMap::new();
+        AppState {
+            models: Arc::new(models),
+            default_model: "whisper-tiny".to_string(),
+            api_key: api_key.map(|v| v.to_string()),
+        }
+    }
+
+    #[test]
+    fn check_auth_allows_when_no_key_configured() {
+        let state = state_with_key(None);
+        let headers = HeaderMap::new();
+
+        assert!(check_auth(&state, &headers).is_ok());
+    }
+
+    #[test]
+    fn check_auth_rejects_missing_or_invalid_key() {
+        let state = state_with_key(Some("secret"));
+        let headers = HeaderMap::new();
+
+        let response = check_auth(&state, &headers)
+            .expect_err("missing key should be rejected")
+            .into_response();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", HeaderValue::from_static("Bearer wrong"));
+        let response = check_auth(&state, &headers)
+            .expect_err("invalid key should be rejected")
+            .into_response();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[test]
+    fn check_auth_accepts_valid_key() {
+        let state = state_with_key(Some("secret"));
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", HeaderValue::from_static("Bearer secret"));
+
+        assert!(check_auth(&state, &headers).is_ok());
+    }
+}

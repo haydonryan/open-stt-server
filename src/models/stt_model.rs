@@ -122,3 +122,34 @@ impl FromStr for STTModel {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_openai_alias() {
+        let parsed = "whisper-1".parse::<STTModel>().expect("alias should parse");
+        assert_eq!(parsed, STTModel::WhisperTiny);
+    }
+
+    #[test]
+    fn rejects_unknown_model() {
+        let err = "whisper-ultra".parse::<STTModel>().unwrap_err();
+        assert!(err.contains("Unknown model"));
+    }
+
+    #[test]
+    fn voxtral_detection() {
+        assert!(STTModel::VoxtralMini.is_voxtral());
+        assert!(STTModel::VoxtralSmall.is_voxtral());
+        assert!(!STTModel::WhisperBase.is_voxtral());
+    }
+
+    #[test]
+    fn model_and_revision_matches_expected() {
+        let (id, rev) = STTModel::WhisperLargeV3.model_and_revision();
+        assert_eq!(id, "openai/whisper-large-v3");
+        assert_eq!(rev, "main");
+    }
+}

@@ -53,3 +53,38 @@ impl Config {
             .unwrap_or_else(|| self.models[0])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn effective_default_model_falls_back_to_first_model() {
+        let config = Config {
+            port: 8080,
+            models: vec![STTModel::WhisperTiny, STTModel::WhisperBase],
+            default_model: None,
+            force_cpu: false,
+            download: false,
+            api_key: None,
+            log_level: "info".to_string(),
+        };
+
+        assert_eq!(config.effective_default_model(), STTModel::WhisperTiny);
+    }
+
+    #[test]
+    fn effective_default_model_prefers_explicit_setting() {
+        let config = Config {
+            port: 8080,
+            models: vec![STTModel::WhisperTiny, STTModel::WhisperBase],
+            default_model: Some(STTModel::WhisperBase),
+            force_cpu: false,
+            download: false,
+            api_key: None,
+            log_level: "info".to_string(),
+        };
+
+        assert_eq!(config.effective_default_model(), STTModel::WhisperBase);
+    }
+}
