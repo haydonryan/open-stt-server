@@ -107,11 +107,11 @@ async fn download_and_hash(url: &str, blobs_dir: &Path) -> Result<PathBuf> {
         file.write_all(&chunk).await?;
         downloaded += chunk.len() as u64;
 
-        if let Some(total) = total {
-            if downloaded % (10 * 1024 * 1024) < chunk.len() as u64 {
-                let pct = downloaded * 100 / total;
-                info!("  {pct}% ({} MB / {} MB)", downloaded / 1024 / 1024, total / 1024 / 1024);
-            }
+        if let Some(total) = total
+            && downloaded % (10 * 1024 * 1024) < chunk.len() as u64
+        {
+            let pct = downloaded * 100 / total;
+            info!("  {pct}% ({} MB / {} MB)", downloaded / 1024 / 1024, total / 1024 / 1024);
         }
     }
 
