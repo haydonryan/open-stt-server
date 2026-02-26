@@ -1,0 +1,65 @@
+# cargo-deny configuration
+# Checks only produce *errors* for issues likely caused by direct dependencies.
+# Transitive-only noise (duplicate versions, unmaintained notices) uses "warn".
+#
+# To strictly limit to direct deps only, run:
+#   cargo metadata --format-version 1 | python3 scripts/gen-deny-excludes.py
+# and populate [graph].exclude with the generated list.
+
+[graph]
+exclude-dev = false
+
+[output]
+feature-depth = 1
+
+# ---------------------------------------------------------------------------
+# Security advisories
+# ---------------------------------------------------------------------------
+[advisories]
+version = 2
+# Yanked crates are always an error — someone explicitly retracted the release.
+yanked = "deny"
+# "workspace" = only error on direct dependencies that are unmaintained;
+# transitive unmaintained deps produce no error.
+unmaintained = "workspace"
+
+# ---------------------------------------------------------------------------
+# License compliance
+# ---------------------------------------------------------------------------
+[licenses]
+version = 2
+# Permissive licenses used across the Rust ecosystem (covers all known direct
+# and transitive deps in this project).
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "MPL-2.0",                # symphonia (direct dep) and some transitive deps
+    "CDLA-Permissive-2.0",    # community data license, permissive
+]
+confidence-threshold = 0.8
+
+# ---------------------------------------------------------------------------
+# Banned / duplicate crates
+# ---------------------------------------------------------------------------
+[bans]
+# Duplicate versions are extremely common in transitive deps; only warn.
+multiple-versions = "warn"
+# Git and path dependencies intentionally use wildcards (candle uses git deps).
+wildcards = "allow"
+allow-wildcard-paths = true
+
+# ---------------------------------------------------------------------------
+# Allowed sources
+# ---------------------------------------------------------------------------
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# candle ML framework is pulled directly from the upstream repo
+allow-git = ["https://github.com/huggingface/candle"]
