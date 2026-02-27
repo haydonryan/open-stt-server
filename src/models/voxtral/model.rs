@@ -17,6 +17,24 @@ use crate::models::stt_model::STTModel;
 
 const SAMPLE_RATE: u32 = 16000;
 
+// Audio chunking
+/// 30 seconds at 16 kHz
+const CHUNK_SIZE: usize = 480_000;
+/// Mel-frame tokens produced per 30-second audio chunk
+const TOKENS_PER_CHUNK: usize = 375;
+/// Number of mel frequency bins expected by the audio encoder
+const MEL_BINS: usize = 128;
+
+// Voxtral prompt template token IDs
+const TOKEN_BOS: u32 = 1;
+const TOKEN_INST_BEGIN: u32 = 3;
+const TOKEN_BEGIN_AUDIO: u32 = 25;
+const TOKEN_INST_END: u32 = 4;
+const TOKEN_LANG: u32 = 9909;
+const TOKEN_COLON: u32 = 1058;
+const TOKEN_EN: u32 = 1262;
+const TOKEN_TRANSCRIBE: u32 = 34;
+
 pub struct VoxtralModel {
     model: VoxtralForConditionalGeneration,
     tokenizer: Tekkenizer,
@@ -88,9 +106,8 @@ impl VoxtralModel {
             resample(audio_data, sample_rate, SAMPLE_RATE, ResampleQuality::Fast)?
         };
 
-        let chunk_size = 480_000;
-        let padded_audio = if audio.len() % chunk_size != 0 {
-            let target_samples = ((audio.len() / chunk_size) + 1) * chunk_size;
+        let padded_audio = if audio.len() % CHUNK_SIZE != 0 {
+            let target_samples = ((audio.len() / CHUNK_SIZE) + 1) * CHUNK_SIZE;
             let mut padded = audio.clone();
             padded.resize(target_samples, 0.0);
             padded
@@ -127,32 +144,31 @@ fn transcribe_with_voxtral(
             "Audio features must be 3D tensor, got shape: {audio_dims:?}"
         ));
     }
-    if audio_dims[1] != 128 {
+    if audio_dims[1] != MEL_BINS {
         return Err(anyhow::anyhow!(
-            "Audio features must have 128 mel bins, got {}",
+            "Audio features must have {MEL_BINS} mel bins, got {}",
             audio_dims[1]
         ));
     }
 
     let mut input_tokens = Vec::new();
-    input_tokens.push(1u32); // BOS <s>
-    input_tokens.push(3u32); // [INST]
-    input_tokens.push(25u32); // [BEGIN_AUDIO]
+    input_tokens.push(TOKEN_BOS);
+    input_tokens.push(TOKEN_INST_BEGIN);
+    input_tokens.push(TOKEN_BEGIN_AUDIO);
 
     let batch_size = audio_features.dim(0)?;
-    let tokens_per_chunk = 375;
-    let num_audio_tokens = batch_size * tokens_per_chunk;
+    let num_audio_tokens = batch_size * TOKENS_PER_CHUNK;
 
     for _ in 0..num_audio_tokens {
         #[allow(clippy::cast_possible_truncation)]
         input_tokens.push(audio_token_id as u32);
     }
 
-    input_tokens.push(4u32); // [/INST]
-    input_tokens.push(9909u32); // lang
-    input_tokens.push(1058u32); // :
-    input_tokens.push(1262u32); // en
-    input_tokens.push(34u32); // [TRANSCRIBE]
+    input_tokens.push(TOKEN_INST_END);
+    input_tokens.push(TOKEN_LANG);
+    input_tokens.push(TOKEN_COLON);
+    input_tokens.push(TOKEN_EN);
+    input_tokens.push(TOKEN_TRANSCRIBE);
 
     let input_len = input_tokens.len();
     let input_ids = Tensor::new(input_tokens, device)?.unsqueeze(0)?;
