@@ -74,18 +74,9 @@ impl WhisperModel {
 
         let file_paths = crate::models::download::get_model_file_paths(stt_model)?;
 
-        let config_path = file_paths
-            .iter()
-            .find(|p| p.file_name().unwrap().to_str().unwrap() == "config.json")
-            .ok_or_else(|| anyhow::anyhow!("config.json not found"))?;
-        let tokenizer_path = file_paths
-            .iter()
-            .find(|p| p.file_name().unwrap().to_str().unwrap() == "tokenizer.json")
-            .ok_or_else(|| anyhow::anyhow!("tokenizer.json not found"))?;
-        let weights_path = file_paths
-            .iter()
-            .find(|p| p.file_name().unwrap().to_str().unwrap() == "model.safetensors")
-            .ok_or_else(|| anyhow::anyhow!("model.safetensors not found"))?;
+        let config_path = crate::models::find_model_file(&file_paths, "config.json")?;
+        let tokenizer_path = crate::models::find_model_file(&file_paths, "tokenizer.json")?;
+        let weights_path = crate::models::find_model_file(&file_paths, "model.safetensors")?;
 
         let config_str =
             std::fs::read_to_string(config_path).context("Failed to read config file")?;

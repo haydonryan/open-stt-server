@@ -10,12 +10,24 @@ pub mod whisper;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+#[cfg(feature = "candle")]
+use std::path::PathBuf;
 
 use stt_model::STTModel;
 #[cfg(feature = "candle")]
 use voxtral::VoxtralModel;
 #[cfg(feature = "candle")]
 use whisper::WhisperModel;
+
+/// Find a model file by name within the list of cached paths.
+/// Returns an error rather than panicking on non-UTF-8 or missing names.
+#[cfg(feature = "candle")]
+pub fn find_model_file<'a>(paths: &'a [PathBuf], filename: &str) -> Result<&'a PathBuf> {
+    paths
+        .iter()
+        .find(|p| p.file_name().and_then(|n| n.to_str()) == Some(filename))
+        .ok_or_else(|| anyhow::anyhow!("{filename} not found in model files"))
+}
 
 #[cfg(feature = "candle")]
 pub enum ModelInstance {

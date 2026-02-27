@@ -49,14 +49,8 @@ impl VoxtralModel {
 
         let file_paths = crate::models::download::get_model_file_paths(stt_model)?;
 
-        let config_path = file_paths
-            .iter()
-            .find(|p| p.file_name().unwrap().to_str().unwrap() == "config.json")
-            .ok_or_else(|| anyhow::anyhow!("config.json not found"))?;
-        let tokenizer_path = file_paths
-            .iter()
-            .find(|p| p.file_name().unwrap().to_str().unwrap() == "tekken.json")
-            .ok_or_else(|| anyhow::anyhow!("tekken.json not found"))?;
+        let config_path = crate::models::find_model_file(&file_paths, "config.json")?;
+        let tokenizer_path = crate::models::find_model_file(&file_paths, "tekken.json")?;
 
         let safetensors_files: Vec<PathBuf> = file_paths
             .iter()
