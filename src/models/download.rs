@@ -50,14 +50,8 @@ async fn download_file(model_id: &str, revision: &str, filename: &str) -> Result
         fs::create_dir_all(parent).await?;
     }
 
-    let blob_relative_path = {
-        let mut relative = PathBuf::new();
-        relative.push("..");
-        relative.push("..");
-        relative.push("blobs");
-        relative.push(final_blob_path.file_name().unwrap());
-        relative
-    };
+    let blob_relative_path = std::path::Path::new("../../blobs")
+        .join(final_blob_path.file_name().unwrap());
 
     #[cfg(unix)]
     {
