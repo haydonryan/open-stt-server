@@ -21,8 +21,9 @@ async fn main() -> Result<()> {
     let cfg = Config::parse();
 
     // Initialise logging
-    unsafe { std::env::set_var("RUST_LOG", &cfg.log_level) };
-    env_logger::init();
+    env_logger::Builder::new()
+        .parse_filters(&cfg.log_level)
+        .init();
 
     info!("open-stt-server starting up");
     info!("Models to load: {:?}", cfg.models);
