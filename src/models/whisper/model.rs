@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
-use candle_core::utils::{cuda_is_available, metal_is_available};
 use candle_core::{Device, IndexOp, Tensor};
 use candle_nn::{VarBuilder, ops::softmax};
 use candle_transformers::models::whisper::{self as m, Config, audio};
@@ -58,19 +57,7 @@ impl WhisperModel {
     pub fn new(stt_model: &STTModel, force_cpu: bool) -> Result<Self> {
         info!("Loading Whisper {stt_model:?} model...");
 
-        let device = if force_cpu {
-            info!("Using CPU (forced by user)");
-            Device::Cpu
-        } else if metal_is_available() {
-            info!("Using Metal device (Apple Silicon)");
-            Device::new_metal(0).context("Failed to create Metal device")?
-        } else if cuda_is_available() {
-            info!("Using CUDA device");
-            Device::new_cuda(0).context("Failed to create CUDA device")?
-        } else {
-            info!("Using CPU (no GPU acceleration available)");
-            Device::Cpu
-        };
+        let device = crate::models::select_device(force_cpu)?;
 
         let file_paths = crate::models::download::get_model_file_paths(stt_model)?;
 

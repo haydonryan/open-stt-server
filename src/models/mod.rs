@@ -12,12 +12,35 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 #[cfg(feature = "candle")]
 use std::path::PathBuf;
+#[cfg(feature = "candle")]
+use candle_core::{Device, utils::{cuda_is_available, metal_is_available}};
+#[cfg(feature = "candle")]
+use log::info;
 
 use stt_model::STTModel;
 #[cfg(feature = "candle")]
 use voxtral::VoxtralModel;
 #[cfg(feature = "candle")]
 use whisper::WhisperModel;
+
+/// Select the best available compute device.
+#[cfg(feature = "candle")]
+pub fn select_device(force_cpu: bool) -> Result<Device> {
+    if force_cpu {
+        info!("Using CPU (forced by user)");
+        return Ok(Device::Cpu);
+    }
+    if metal_is_available() {
+        info!("Using Metal device (Apple Silicon)");
+        return Device::new_metal(0).map_err(|e| anyhow::anyhow!("Failed to create Metal device: {e}"));
+    }
+    if cuda_is_available() {
+        info!("Using CUDA device");
+        return Device::new_cuda(0).map_err(|e| anyhow::anyhow!("Failed to create CUDA device: {e}"));
+    }
+    info!("Using CPU (no GPU acceleration available)");
+    Ok(Device::Cpu)
+}
 
 /// Find a model file by name within the list of cached paths.
 /// Returns an error rather than panicking on non-UTF-8 or missing names.
