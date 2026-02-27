@@ -50,8 +50,8 @@ async fn download_file(model_id: &str, revision: &str, filename: &str) -> Result
         fs::create_dir_all(parent).await?;
     }
 
-    let blob_relative_path = std::path::Path::new("../../blobs")
-        .join(final_blob_path.file_name().unwrap());
+    let blob_relative_path =
+        std::path::Path::new("../../blobs").join(final_blob_path.file_name().unwrap());
 
     #[cfg(unix)]
     {
@@ -105,7 +105,11 @@ async fn download_and_hash(url: &str, blobs_dir: &Path) -> Result<PathBuf> {
             && downloaded % (10 * 1024 * 1024) < chunk.len() as u64
         {
             let pct = downloaded * 100 / total;
-            info!("  {pct}% ({} MB / {} MB)", downloaded / 1024 / 1024, total / 1024 / 1024);
+            info!(
+                "  {pct}% ({} MB / {} MB)",
+                downloaded / 1024 / 1024,
+                total / 1024 / 1024
+            );
         }
     }
 
@@ -172,7 +176,11 @@ pub async fn ensure_model_downloaded(model: &STTModel) -> Result<()> {
     let (model_id, revision) = model.model_and_revision();
     let files = model_files(model);
 
-    info!("Ensuring model {} is downloaded ({} files)...", model, files.len());
+    info!(
+        "Ensuring model {} is downloaded ({} files)...",
+        model,
+        files.len()
+    );
 
     for filename in &files {
         download_file(model_id, revision, filename).await?;
@@ -189,9 +197,11 @@ pub fn get_model_file_paths(model: &STTModel) -> Result<Vec<PathBuf>> {
         .iter()
         .map(|filename| {
             let (path, _) = get_cache_paths(model_id, revision, filename)?;
-            path.exists()
-                .then_some(path)
-                .ok_or_else(|| anyhow::anyhow!("Model file not found: {filename}. Run with --download to fetch it."))
+            path.exists().then_some(path).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Model file not found: {filename}. Run with --download to fetch it."
+                )
+            })
         })
         .collect()
 }

@@ -1,5 +1,8 @@
 use anyhow::Result;
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use clap::Parser;
 use log::info;
 use std::collections::HashMap;
@@ -44,10 +47,9 @@ async fn main() -> Result<()> {
         let model_clone = *model;
         let force_cpu = cfg.force_cpu;
 
-        let instance: ModelInstance = tokio::task::spawn_blocking(move || {
-            load_model_blocking(&model_clone, force_cpu)
-        })
-        .await??;
+        let instance: ModelInstance =
+            tokio::task::spawn_blocking(move || load_model_blocking(&model_clone, force_cpu))
+                .await??;
 
         let shared: SharedModel = Arc::new(Mutex::new(instance));
         loaded.insert(*model, shared);

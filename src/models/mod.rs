@@ -1,21 +1,24 @@
-pub mod download;
-pub mod stt_model;
 #[cfg(feature = "candle")]
 pub mod audio_utils;
+pub mod download;
+pub mod stt_model;
 #[cfg(feature = "candle")]
 pub mod voxtral;
 #[cfg(feature = "candle")]
 pub mod whisper;
 
 use anyhow::Result;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 #[cfg(feature = "candle")]
-use std::path::PathBuf;
-#[cfg(feature = "candle")]
-use candle_core::{Device, utils::{cuda_is_available, metal_is_available}};
+use candle_core::{
+    Device,
+    utils::{cuda_is_available, metal_is_available},
+};
 #[cfg(feature = "candle")]
 use log::info;
+#[cfg(feature = "candle")]
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use stt_model::STTModel;
 #[cfg(feature = "candle")]
@@ -32,11 +35,13 @@ pub fn select_device(force_cpu: bool) -> Result<Device> {
     }
     if metal_is_available() {
         info!("Using Metal device (Apple Silicon)");
-        return Device::new_metal(0).map_err(|e| anyhow::anyhow!("Failed to create Metal device: {e}"));
+        return Device::new_metal(0)
+            .map_err(|e| anyhow::anyhow!("Failed to create Metal device: {e}"));
     }
     if cuda_is_available() {
         info!("Using CUDA device");
-        return Device::new_cuda(0).map_err(|e| anyhow::anyhow!("Failed to create CUDA device: {e}"));
+        return Device::new_cuda(0)
+            .map_err(|e| anyhow::anyhow!("Failed to create CUDA device: {e}"));
     }
     info!("Using CPU (no GPU acceleration available)");
     Ok(Device::Cpu)

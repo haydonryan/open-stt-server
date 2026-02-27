@@ -3,6 +3,7 @@ name = "open-stt-server"
 version = "0.1.0"
 edition = "2024"
 description = "A Whisper-compatible STT API server"
+license = "MIT"
 
 [[bin]]
 name = "open-stt-server"

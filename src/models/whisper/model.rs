@@ -106,7 +106,13 @@ impl WhisperModel {
         let no_timestamps_token = lookup(m::NO_TIMESTAMPS_TOKEN)?;
 
         let suppress_tokens: Vec<f32> = (0..u32::try_from(config.vocab_size).unwrap())
-            .map(|i| if config.suppress_tokens.contains(&i) { f32::NEG_INFINITY } else { 0f32 })
+            .map(|i| {
+                if config.suppress_tokens.contains(&i) {
+                    f32::NEG_INFINITY
+                } else {
+                    0f32
+                }
+            })
             .collect();
         let suppress_tokens = Tensor::new(suppress_tokens.as_slice(), &device)
             .context("Failed to build suppress_tokens tensor")?;

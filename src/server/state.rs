@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::models::stt_model::STTModel;
 use crate::models::SharedModel;
+use crate::models::stt_model::STTModel;
 
 #[derive(Clone)]
 pub struct AppState {

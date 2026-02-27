@@ -49,8 +49,7 @@ pub struct Config {
 impl Config {
     /// Returns the effective default model (first in list if not explicitly set).
     pub fn effective_default_model(&self) -> STTModel {
-        self.default_model
-            .unwrap_or_else(|| self.models[0])
+        self.default_model.unwrap_or_else(|| self.models[0])
     }
 }
 

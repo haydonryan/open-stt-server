@@ -66,7 +66,10 @@ impl VoxtralModel {
         info!("Loading model configuration...");
         let config = load_model_config(config_path)?;
 
-        info!("Loading model weights ({} files)...", safetensors_files.len());
+        info!(
+            "Loading model weights ({} files)...",
+            safetensors_files.len()
+        );
         let vb = load_model_weights(&safetensors_files, &device)?;
 
         info!("Creating Voxtral model...");
@@ -115,7 +118,8 @@ impl VoxtralModel {
             audio
         };
 
-        let audio_features = audio::extract_features(&padded_audio, &self.mel_filters, &self.device)?;
+        let audio_features =
+            audio::extract_features(&padded_audio, &self.mel_filters, &self.device)?;
 
         let (result, _tokens) = transcribe_with_voxtral(
             &self.model,
@@ -182,11 +186,7 @@ fn transcribe_with_voxtral(
     };
 
     let generated_tokens = model
-        .generate(
-            &input_ids,
-            Some(audio_features),
-            config,
-        )
+        .generate(&input_ids, Some(audio_features), config)
         .map_err(|e| anyhow::anyhow!("Failed to generate tokens: {e}"))?;
 
     let new_tokens = if generated_tokens.len() > input_len {
@@ -292,22 +292,22 @@ fn parse_audio_config(json: &serde_json::Value) -> Result<VoxtralEncoderConfig> 
         .ok_or_else(|| anyhow::anyhow!("Missing audio_config in configuration"))?;
 
     Ok(VoxtralEncoderConfig {
-        vocab_size:           get_usize(audio_json, "vocab_size",           51866),
-        hidden_size:          get_usize(audio_json, "hidden_size",           1280),
-        num_hidden_layers:    get_usize(audio_json, "num_hidden_layers",       32),
-        num_attention_heads:  get_usize(audio_json, "num_attention_heads",     20),
-        num_key_value_heads:  get_usize(audio_json, "num_key_value_heads",     20),
-        intermediate_size:    get_usize(audio_json, "intermediate_size",     5120),
-        dropout:              get_f64  (audio_json, "dropout",               0.0),
-        attention_dropout:    get_f64  (audio_json, "attention_dropout",     0.0),
-        activation_dropout:   get_f64  (audio_json, "activation_dropout",    0.0),
-        activation_function:  get_str  (audio_json, "activation_function",   "gelu"),
-        max_source_positions: get_usize(audio_json, "max_source_positions",  1500),
-        layerdrop:            get_f64  (audio_json, "layerdrop",             0.0),
-        initializer_range:    get_f64  (audio_json, "initializer_range",     0.02),
-        scale_embedding:      get_bool (audio_json, "scale_embedding",       false),
-        num_mel_bins:         get_usize(audio_json, "num_mel_bins",          128),
-        head_dim:             get_usize(audio_json, "head_dim",              64),
+        vocab_size: get_usize(audio_json, "vocab_size", 51866),
+        hidden_size: get_usize(audio_json, "hidden_size", 1280),
+        num_hidden_layers: get_usize(audio_json, "num_hidden_layers", 32),
+        num_attention_heads: get_usize(audio_json, "num_attention_heads", 20),
+        num_key_value_heads: get_usize(audio_json, "num_key_value_heads", 20),
+        intermediate_size: get_usize(audio_json, "intermediate_size", 5120),
+        dropout: get_f64(audio_json, "dropout", 0.0),
+        attention_dropout: get_f64(audio_json, "attention_dropout", 0.0),
+        activation_dropout: get_f64(audio_json, "activation_dropout", 0.0),
+        activation_function: get_str(audio_json, "activation_function", "gelu"),
+        max_source_positions: get_usize(audio_json, "max_source_positions", 1500),
+        layerdrop: get_f64(audio_json, "layerdrop", 0.0),
+        initializer_range: get_f64(audio_json, "initializer_range", 0.02),
+        scale_embedding: get_bool(audio_json, "scale_embedding", false),
+        num_mel_bins: get_usize(audio_json, "num_mel_bins", 128),
+        head_dim: get_usize(audio_json, "head_dim", 64),
     })
 }
 
@@ -320,17 +320,20 @@ fn parse_text_config(json: &serde_json::Value) -> Result<VoxtralLlamaConfig> {
 
     #[allow(clippy::cast_possible_truncation)]
     Ok(VoxtralLlamaConfig {
-        vocab_size:              get_usize(text_json, "vocab_size",             131_072),
-        hidden_size:             get_usize(text_json, "hidden_size",               3072),
-        intermediate_size:       get_usize(text_json, "intermediate_size",         8192),
-        num_hidden_layers:       get_usize(text_json, "num_hidden_layers",           30),
-        num_attention_heads:     get_usize(text_json, "num_attention_heads",         32),
-        num_key_value_heads:     get_usize(text_json, "num_key_value_heads",          8),
-        head_dim:                text_json.get("head_dim").and_then(serde_json::Value::as_u64).and_then(|v| usize::try_from(v).ok()),
-        rms_norm_eps:            get_f64  (text_json, "rms_norm_eps",              1e-5),
-        rope_theta:              get_f64  (text_json, "rope_theta",     100_000_000.0) as f32,
+        vocab_size: get_usize(text_json, "vocab_size", 131_072),
+        hidden_size: get_usize(text_json, "hidden_size", 3072),
+        intermediate_size: get_usize(text_json, "intermediate_size", 8192),
+        num_hidden_layers: get_usize(text_json, "num_hidden_layers", 30),
+        num_attention_heads: get_usize(text_json, "num_attention_heads", 32),
+        num_key_value_heads: get_usize(text_json, "num_key_value_heads", 8),
+        head_dim: text_json
+            .get("head_dim")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|v| usize::try_from(v).ok()),
+        rms_norm_eps: get_f64(text_json, "rms_norm_eps", 1e-5),
+        rope_theta: get_f64(text_json, "rope_theta", 100_000_000.0) as f32,
         max_position_embeddings: get_usize(text_json, "max_position_embeddings", 131_072),
         use_flash_attn: USE_FLASH_ATTN,
-        tie_word_embeddings:     get_bool (text_json, "attention_bias",           false),
+        tie_word_embeddings: get_bool(text_json, "attention_bias", false),
     })
 }

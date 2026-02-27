@@ -31,7 +31,9 @@ fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), impl IntoResp
     } else {
         Err((
             StatusCode::UNAUTHORIZED,
-            Json(json!({"error": {"message": "Invalid or missing API key", "type": "authentication_error"}})),
+            Json(
+                json!({"error": {"message": "Invalid or missing API key", "type": "authentication_error"}}),
+            ),
         ))
     }
 }
@@ -81,14 +83,16 @@ pub async fn transcribe(
             Ok(Some(field)) => {
                 let name = field.name().unwrap_or("").to_string();
                 match name.as_str() {
-                    "file" => {
-                        match field.bytes().await {
-                            Ok(b) => audio_bytes = Some(b),
-                            Err(e) => {
-                                return api_error(StatusCode::BAD_REQUEST, format!("Failed to read audio file: {e}"), "invalid_request_error");
-                            }
+                    "file" => match field.bytes().await {
+                        Ok(b) => audio_bytes = Some(b),
+                        Err(e) => {
+                            return api_error(
+                                StatusCode::BAD_REQUEST,
+                                format!("Failed to read audio file: {e}"),
+                                "invalid_request_error",
+                            );
                         }
-                    }
+                    },
                     "model" => {
                         if let Ok(v) = field.text().await {
                             model_name = Some(v);
@@ -107,14 +111,24 @@ pub async fn transcribe(
             }
             Ok(None) => break,
             Err(e) => {
-                return api_error(StatusCode::BAD_REQUEST, format!("Multipart error: {e}"), "invalid_request_error");
+                return api_error(
+                    StatusCode::BAD_REQUEST,
+                    format!("Multipart error: {e}"),
+                    "invalid_request_error",
+                );
             }
         }
     }
 
     let audio_bytes = match audio_bytes {
         Some(b) => b,
-        None => return api_error(StatusCode::BAD_REQUEST, "Missing required field: file", "invalid_request_error"),
+        None => {
+            return api_error(
+                StatusCode::BAD_REQUEST,
+                "Missing required field: file",
+                "invalid_request_error",
+            );
+        }
     };
 
     // Resolve model
@@ -135,7 +149,13 @@ pub async fn transcribe(
     // Decode audio
     let (pcm, sample_rate) = match decode_audio_bytes(&audio_bytes) {
         Ok(v) => v,
-        Err(e) => return api_error(StatusCode::BAD_REQUEST, format!("Failed to decode audio: {e}"), "invalid_request_error"),
+        Err(e) => {
+            return api_error(
+                StatusCode::BAD_REQUEST,
+                format!("Failed to decode audio: {e}"),
+                "invalid_request_error",
+            );
+        }
     };
 
     info!(
@@ -153,8 +173,20 @@ pub async fn transcribe(
     .await
     {
         Ok(Ok(t)) => t,
-        Ok(Err(e)) => return api_error(StatusCode::INTERNAL_SERVER_ERROR, format!("Transcription failed: {e}"), "server_error"),
-        Err(e) => return api_error(StatusCode::INTERNAL_SERVER_ERROR, format!("Task panicked: {e}"), "server_error"),
+        Ok(Err(e)) => {
+            return api_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Transcription failed: {e}"),
+                "server_error",
+            );
+        }
+        Err(e) => {
+            return api_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Task panicked: {e}"),
+                "server_error",
+            );
+        }
     };
 
     match response_format.as_str() {
@@ -180,10 +212,7 @@ struct ModelsResponse {
     data: Vec<ModelObject>,
 }
 
-pub async fn list_models(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+pub async fn list_models(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     if let Err(e) = check_auth(&state, &headers) {
         return e.into_response();
     }
@@ -198,7 +227,11 @@ pub async fn list_models(
         })
         .collect();
 
-    Json(ModelsResponse { object: "list", data }).into_response()
+    Json(ModelsResponse {
+        object: "list",
+        data,
+    })
+    .into_response()
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,17 @@
 use std::str::FromStr;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, clap::ValueEnum, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Hash,
+    clap::ValueEnum,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 pub enum STTModel {
     #[value(name = "whisper-tiny")]
     #[default]

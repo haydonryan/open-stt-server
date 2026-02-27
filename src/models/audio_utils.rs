@@ -17,7 +17,12 @@ pub enum ResampleQuality {
     clippy::cast_precision_loss,
     clippy::cast_sign_loss
 )]
-pub fn resample(samples: &[f32], from_sr: u32, to_sr: u32, quality: ResampleQuality) -> Result<Vec<f32>> {
+pub fn resample(
+    samples: &[f32],
+    from_sr: u32,
+    to_sr: u32,
+    quality: ResampleQuality,
+) -> Result<Vec<f32>> {
     if from_sr == to_sr {
         return Ok(samples.to_vec());
     }
