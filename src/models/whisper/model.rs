@@ -92,18 +92,15 @@ impl WhisperModel {
                 .context("Failed to create Whisper model")?,
         );
 
-        let sot_token = tokenizer
-            .token_to_id(m::SOT_TOKEN)
-            .ok_or_else(|| anyhow::anyhow!("Failed to get sot token"))?;
-        let transcribe_token = tokenizer
-            .token_to_id(m::TRANSCRIBE_TOKEN)
-            .ok_or_else(|| anyhow::anyhow!("Failed to get transcribe token"))?;
-        let eot_token = tokenizer
-            .token_to_id(m::EOT_TOKEN)
-            .ok_or_else(|| anyhow::anyhow!("Failed to get eot token"))?;
-        let no_timestamps_token = tokenizer
-            .token_to_id(m::NO_TIMESTAMPS_TOKEN)
-            .ok_or_else(|| anyhow::anyhow!("Failed to get no_timestamps token"))?;
+        let lookup = |tok: &str| {
+            tokenizer
+                .token_to_id(tok)
+                .ok_or_else(|| anyhow::anyhow!("Missing token in tokenizer: {tok}"))
+        };
+        let sot_token = lookup(m::SOT_TOKEN)?;
+        let transcribe_token = lookup(m::TRANSCRIBE_TOKEN)?;
+        let eot_token = lookup(m::EOT_TOKEN)?;
+        let no_timestamps_token = lookup(m::NO_TIMESTAMPS_TOKEN)?;
 
         info!("Whisper model loaded successfully on {device:?}");
 
