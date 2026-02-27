@@ -242,25 +242,41 @@ fn load_model_weights<'a>(model_files: &'a [PathBuf], device: &Device) -> Result
     Ok(vb)
 }
 
+fn get_usize(json: &serde_json::Value, key: &str, default: usize) -> usize {
+    json.get(key)
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(default)
+}
+
+fn get_f64(json: &serde_json::Value, key: &str, default: f64) -> f64 {
+    json.get(key)
+        .and_then(serde_json::Value::as_f64)
+        .unwrap_or(default)
+}
+
+fn get_bool(json: &serde_json::Value, key: &str, default: bool) -> bool {
+    json.get(key)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(default)
+}
+
+fn get_str(json: &serde_json::Value, key: &str, default: &str) -> String {
+    json.get(key)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or(default)
+        .to_string()
+}
+
 fn load_model_config(config_file: &PathBuf) -> Result<VoxtralConfig> {
     let config_str = std::fs::read_to_string(config_file)?;
     let json: serde_json::Value =
         serde_json::from_str(&config_str).context("Failed to parse config.json")?;
 
-    let audio_token_id = json
-        .get("audio_token_id")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|v| usize::try_from(v).ok())
-        .unwrap_or(24);
-
+    let audio_token_id = get_usize(&json, "audio_token_id", 24);
     let audio_config = parse_audio_config(&json)?;
     let text_config = parse_text_config(&json)?;
-
-    let projector_hidden_act = json
-        .get("projector_hidden_act")
-        .and_then(|v| v.as_str())
-        .unwrap_or("gelu")
-        .to_string();
+    let projector_hidden_act = get_str(&json, "projector_hidden_act", "gelu");
 
     Ok(VoxtralConfig {
         audio_config,
@@ -276,80 +292,22 @@ fn parse_audio_config(json: &serde_json::Value) -> Result<VoxtralEncoderConfig> 
         .ok_or_else(|| anyhow::anyhow!("Missing audio_config in configuration"))?;
 
     Ok(VoxtralEncoderConfig {
-        vocab_size: audio_json
-            .get("vocab_size")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(51866),
-        hidden_size: audio_json
-            .get("hidden_size")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(1280),
-        num_hidden_layers: audio_json
-            .get("num_hidden_layers")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(32),
-        num_attention_heads: audio_json
-            .get("num_attention_heads")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(20),
-        num_key_value_heads: audio_json
-            .get("num_key_value_heads")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(20),
-        intermediate_size: audio_json
-            .get("intermediate_size")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(5120),
-        dropout: audio_json
-            .get("dropout")
-            .and_then(serde_json::Value::as_f64)
-            .unwrap_or(0.0),
-        attention_dropout: audio_json
-            .get("attention_dropout")
-            .and_then(serde_json::Value::as_f64)
-            .unwrap_or(0.0),
-        activation_dropout: audio_json
-            .get("activation_dropout")
-            .and_then(serde_json::Value::as_f64)
-            .unwrap_or(0.0),
-        activation_function: audio_json
-            .get("activation_function")
-            .and_then(|v| v.as_str())
-            .unwrap_or("gelu")
-            .to_string(),
-        max_source_positions: audio_json
-            .get("max_source_positions")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(1500),
-        layerdrop: audio_json
-            .get("layerdrop")
-            .and_then(serde_json::Value::as_f64)
-            .unwrap_or(0.0),
-        initializer_range: audio_json
-            .get("initializer_range")
-            .and_then(serde_json::Value::as_f64)
-            .unwrap_or(0.02),
-        scale_embedding: audio_json
-            .get("scale_embedding")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false),
-        num_mel_bins: audio_json
-            .get("num_mel_bins")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(128),
-        head_dim: audio_json
-            .get("head_dim")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(64),
+        vocab_size:           get_usize(audio_json, "vocab_size",           51866),
+        hidden_size:          get_usize(audio_json, "hidden_size",           1280),
+        num_hidden_layers:    get_usize(audio_json, "num_hidden_layers",       32),
+        num_attention_heads:  get_usize(audio_json, "num_attention_heads",     20),
+        num_key_value_heads:  get_usize(audio_json, "num_key_value_heads",     20),
+        intermediate_size:    get_usize(audio_json, "intermediate_size",     5120),
+        dropout:              get_f64  (audio_json, "dropout",               0.0),
+        attention_dropout:    get_f64  (audio_json, "attention_dropout",     0.0),
+        activation_dropout:   get_f64  (audio_json, "activation_dropout",    0.0),
+        activation_function:  get_str  (audio_json, "activation_function",   "gelu"),
+        max_source_positions: get_usize(audio_json, "max_source_positions",  1500),
+        layerdrop:            get_f64  (audio_json, "layerdrop",             0.0),
+        initializer_range:    get_f64  (audio_json, "initializer_range",     0.02),
+        scale_embedding:      get_bool (audio_json, "scale_embedding",       false),
+        num_mel_bins:         get_usize(audio_json, "num_mel_bins",          128),
+        head_dim:             get_usize(audio_json, "head_dim",              64),
     })
 }
 
@@ -370,62 +328,19 @@ fn parse_text_config(json: &serde_json::Value) -> Result<VoxtralLlamaConfig> {
 
     let use_flash_attn = use_flash_attn();
 
+    #[allow(clippy::cast_possible_truncation)]
     Ok(VoxtralLlamaConfig {
-        vocab_size: text_json
-            .get("vocab_size")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(131_072),
-        hidden_size: text_json
-            .get("hidden_size")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(3072),
-        intermediate_size: text_json
-            .get("intermediate_size")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(8192),
-        num_hidden_layers: text_json
-            .get("num_hidden_layers")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(30),
-        num_attention_heads: text_json
-            .get("num_attention_heads")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(32),
-        num_key_value_heads: text_json
-            .get("num_key_value_heads")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(8),
-        head_dim: text_json
-            .get("head_dim")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok()),
-        rms_norm_eps: text_json
-            .get("rms_norm_eps")
-            .and_then(serde_json::Value::as_f64)
-            .unwrap_or(1e-5),
-        rope_theta: {
-            let v = text_json
-                .get("rope_theta")
-                .and_then(serde_json::Value::as_f64)
-                .unwrap_or(100_000_000.0);
-            #[allow(clippy::cast_possible_truncation)]
-            { v as f32 }
-        },
-        max_position_embeddings: text_json
-            .get("max_position_embeddings")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| usize::try_from(v).ok())
-            .unwrap_or(131_072),
+        vocab_size:              get_usize(text_json, "vocab_size",             131_072),
+        hidden_size:             get_usize(text_json, "hidden_size",               3072),
+        intermediate_size:       get_usize(text_json, "intermediate_size",         8192),
+        num_hidden_layers:       get_usize(text_json, "num_hidden_layers",           30),
+        num_attention_heads:     get_usize(text_json, "num_attention_heads",         32),
+        num_key_value_heads:     get_usize(text_json, "num_key_value_heads",          8),
+        head_dim:                text_json.get("head_dim").and_then(serde_json::Value::as_u64).and_then(|v| usize::try_from(v).ok()),
+        rms_norm_eps:            get_f64  (text_json, "rms_norm_eps",              1e-5),
+        rope_theta:              get_f64  (text_json, "rope_theta",     100_000_000.0) as f32,
+        max_position_embeddings: get_usize(text_json, "max_position_embeddings", 131_072),
         use_flash_attn,
-        tie_word_embeddings: text_json
-            .get("attention_bias")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false),
+        tie_word_embeddings:     get_bool (text_json, "attention_bias",           false),
     })
 }
