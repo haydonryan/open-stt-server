@@ -185,19 +185,13 @@ pub async fn ensure_model_downloaded(model: &STTModel) -> Result<()> {
 /// Get cached file paths for a model. Returns an error if any file is missing.
 pub fn get_model_file_paths(model: &STTModel) -> Result<Vec<PathBuf>> {
     let (model_id, revision) = model.model_and_revision();
-    let files = model_files(model);
-
-    let mut paths = Vec::new();
-    for filename in &files {
-        let (symlink_path, _) = get_cache_paths(model_id, revision, filename)?;
-        if symlink_path.exists() {
-            paths.push(symlink_path);
-        } else {
-            return Err(anyhow::anyhow!(
-                "Model file not found: {filename}. Run with --download to fetch it."
-            ));
-        }
-    }
-
-    Ok(paths)
+    model_files(model)
+        .iter()
+        .map(|filename| {
+            let (path, _) = get_cache_paths(model_id, revision, filename)?;
+            path.exists()
+                .then_some(path)
+                .ok_or_else(|| anyhow::anyhow!("Model file not found: {filename}. Run with --download to fetch it."))
+        })
+        .collect()
 }
