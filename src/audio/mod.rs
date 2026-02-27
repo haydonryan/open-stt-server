@@ -4,12 +4,12 @@ use symphonia::core::codecs::{CODEC_TYPE_NULL, DecoderOptions};
 use symphonia::core::conv::FromSample;
 use symphonia::core::io::MediaSourceStream;
 
-fn conv<T>(samples: &mut Vec<f32>, data: &symphonia::core::audio::AudioBuffer<T>)
+fn append_mono_samples<T>(samples: &mut Vec<f32>, data: &symphonia::core::audio::AudioBuffer<T>)
 where
     T: symphonia::core::sample::Sample,
     f32: symphonia::core::conv::FromSample<T>,
 {
-    // Mix down to mono by taking channel 0
+    // Downmix to mono (channel 0 only)
     let converted: Vec<f32> = data.chan(0).iter().map(|v| f32::from_sample(*v)).collect();
 
     let max_abs = converted.iter().map(|&x| x.abs()).fold(0.0f32, f32::max);
@@ -65,16 +65,16 @@ pub fn decode_audio_bytes(data: &[u8]) -> Result<(Vec<f32>, u32)> {
         }
 
         match decoder.decode(&packet)? {
-            AudioBufferRef::F64(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::F32(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::S32(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::S16(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::S8(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::U32(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::U16(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::U8(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::U24(buf) => conv(&mut pcm_data, &buf),
-            AudioBufferRef::S24(buf) => conv(&mut pcm_data, &buf),
+            AudioBufferRef::F64(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::F32(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::S32(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::S16(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::S8(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::U32(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::U16(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::U8(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::U24(buf) => append_mono_samples(&mut pcm_data, &buf),
+            AudioBufferRef::S24(buf) => append_mono_samples(&mut pcm_data, &buf),
         }
     }
 
