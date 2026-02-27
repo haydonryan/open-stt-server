@@ -51,6 +51,7 @@ pub struct WhisperModel {
     transcribe_token: u32,
     eot_token: u32,
     no_timestamps_token: u32,
+    suppress_tokens: Tensor,
 }
 
 impl WhisperModel {
@@ -102,6 +103,12 @@ impl WhisperModel {
         let eot_token = lookup(m::EOT_TOKEN)?;
         let no_timestamps_token = lookup(m::NO_TIMESTAMPS_TOKEN)?;
 
+        let suppress_tokens: Vec<f32> = (0..u32::try_from(config.vocab_size).unwrap())
+            .map(|i| if config.suppress_tokens.contains(&i) { f32::NEG_INFINITY } else { 0f32 })
+            .collect();
+        let suppress_tokens = Tensor::new(suppress_tokens.as_slice(), &device)
+            .context("Failed to build suppress_tokens tensor")?;
+
         info!("Whisper model loaded successfully on {device:?}");
 
         Ok(Self {
@@ -114,6 +121,7 @@ impl WhisperModel {
             transcribe_token,
             eot_token,
             no_timestamps_token,
+            suppress_tokens,
         })
     }
 
@@ -187,17 +195,6 @@ impl WhisperModel {
     fn decode_simple(&mut self, mel: &Tensor, temperature: f64) -> Result<String> {
         let audio_features = self.model.encoder_forward(mel, true)?;
 
-        let suppress_tokens: Vec<f32> = (0..u32::try_from(self.config.vocab_size).unwrap())
-            .map(|i| {
-                if self.config.suppress_tokens.contains(&i) {
-                    f32::NEG_INFINITY
-                } else {
-                    0f32
-                }
-            })
-            .collect();
-        let suppress_tokens_tensor = Tensor::new(suppress_tokens.as_slice(), &self.device)?;
-
         let sample_len = self.config.max_target_positions / 2;
         let mut tokens = vec![self.sot_token];
 
@@ -222,7 +219,7 @@ impl WhisperModel {
                 .i(0)?
                 .i(0)?;
 
-            let logits = logits.broadcast_add(&suppress_tokens_tensor)?;
+            let logits = logits.broadcast_add(&self.suppress_tokens)?;
 
             let next_token = if temperature > 0f64 {
                 let prs = softmax(&(&logits / temperature)?, 0)?;
