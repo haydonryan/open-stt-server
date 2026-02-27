@@ -3,7 +3,7 @@ use axum::{
     body::Bytes,
     extract::{Multipart, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use log::{info, warn};
 use serde::Serialize;
@@ -34,6 +34,14 @@ fn check_auth(state: &AppState, headers: &HeaderMap) -> Result<(), impl IntoResp
             Json(json!({"error": {"message": "Invalid or missing API key", "type": "authentication_error"}})),
         ))
     }
+}
+
+fn api_error(status: StatusCode, message: impl std::fmt::Display, error_type: &str) -> Response {
+    (
+        status,
+        Json(json!({"error": {"message": message.to_string(), "type": error_type}})),
+    )
+        .into_response()
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -77,10 +85,7 @@ pub async fn transcribe(
                         match field.bytes().await {
                             Ok(b) => audio_bytes = Some(b),
                             Err(e) => {
-                                return (
-                                    StatusCode::BAD_REQUEST,
-                                    Json(json!({"error": {"message": format!("Failed to read audio file: {e}"), "type": "invalid_request_error"}})),
-                                ).into_response();
+                                return api_error(StatusCode::BAD_REQUEST, format!("Failed to read audio file: {e}"), "invalid_request_error");
                             }
                         }
                     }
@@ -102,22 +107,14 @@ pub async fn transcribe(
             }
             Ok(None) => break,
             Err(e) => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({"error": {"message": format!("Multipart error: {e}"), "type": "invalid_request_error"}})),
-                ).into_response();
+                return api_error(StatusCode::BAD_REQUEST, format!("Multipart error: {e}"), "invalid_request_error");
             }
         }
     }
 
     let audio_bytes = match audio_bytes {
         Some(b) => b,
-        None => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({"error": {"message": "Missing required field: file", "type": "invalid_request_error"}})),
-            ).into_response();
-        }
+        None => return api_error(StatusCode::BAD_REQUEST, "Missing required field: file", "invalid_request_error"),
     };
 
     // Resolve model
@@ -127,27 +124,18 @@ pub async fn transcribe(
             let requested = model_name.as_deref().unwrap_or("<default>");
             let available = state.model_names().join(", ");
             warn!("Requested model '{requested}' is not loaded. Loaded: {available}");
-            return (
+            return api_error(
                 StatusCode::BAD_REQUEST,
-                Json(json!({
-                    "error": {
-                        "message": format!("Model '{requested}' is not loaded. Available: {available}"),
-                        "type": "invalid_request_error"
-                    }
-                })),
-            ).into_response();
+                format!("Model '{requested}' is not loaded. Available: {available}"),
+                "invalid_request_error",
+            );
         }
     };
 
     // Decode audio
     let (pcm, sample_rate) = match decode_audio_bytes(&audio_bytes) {
         Ok(v) => v,
-        Err(e) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({"error": {"message": format!("Failed to decode audio: {e}"), "type": "invalid_request_error"}})),
-            ).into_response();
-        }
+        Err(e) => return api_error(StatusCode::BAD_REQUEST, format!("Failed to decode audio: {e}"), "invalid_request_error"),
     };
 
     info!(
@@ -165,18 +153,8 @@ pub async fn transcribe(
     .await
     {
         Ok(Ok(t)) => t,
-        Ok(Err(e)) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": {"message": format!("Transcription failed: {e}"), "type": "server_error"}})),
-            ).into_response();
-        }
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": {"message": format!("Task panicked: {e}"), "type": "server_error"}})),
-            ).into_response();
-        }
+        Ok(Err(e)) => return api_error(StatusCode::INTERNAL_SERVER_ERROR, format!("Transcription failed: {e}"), "server_error"),
+        Err(e) => return api_error(StatusCode::INTERNAL_SERVER_ERROR, format!("Task panicked: {e}"), "server_error"),
     };
 
     match response_format.as_str() {
