@@ -25,6 +25,7 @@ pub struct VoxtralModel {
     #[allow(dead_code)]
     config: VoxtralConfig,
     audio_token_id: usize,
+    mel_filters: Vec<f32>,
     cache: VoxtralCache,
 }
 
@@ -80,6 +81,11 @@ impl VoxtralModel {
 
         let audio_token_id = config.audio_token_id;
 
+        let mel_bytes = include_bytes!("../data/melfilters128.bytes");
+        let mut mel_filters = vec![0f32; mel_bytes.len() / 4];
+        let mut cursor = Cursor::new(mel_bytes);
+        cursor.read_f32_into::<LittleEndian>(&mut mel_filters)?;
+
         info!("Voxtral model loaded successfully on {device:?}");
 
         Ok(Self {
@@ -88,6 +94,7 @@ impl VoxtralModel {
             device,
             config,
             audio_token_id,
+            mel_filters,
             cache,
         })
     }
@@ -110,12 +117,7 @@ impl VoxtralModel {
             audio
         };
 
-        let mel_bytes = include_bytes!("../data/melfilters128.bytes");
-        let mut mel_filters = vec![0f32; mel_bytes.len() / 4];
-        let mut cursor = Cursor::new(mel_bytes);
-        cursor.read_f32_into::<LittleEndian>(&mut mel_filters)?;
-
-        let audio_features = audio::extract_features(&padded_audio, &mel_filters, &self.device)?;
+        let audio_features = audio::extract_features(&padded_audio, &self.mel_filters, &self.device)?;
 
         let (result, _tokens) = transcribe_with_voxtral(
             &self.model,
