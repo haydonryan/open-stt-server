@@ -11,6 +11,8 @@ use crate::models::audio_utils::{ResampleQuality, resample};
 use crate::models::stt_model::STTModel;
 
 const SAMPLE_RATE: u32 = 16000;
+/// Mel frames per 30-second Whisper segment (100 frames/s × 30 s).
+const MEL_FRAMES_PER_SEGMENT: usize = 3000;
 
 pub enum Model {
     Normal(m::model::Whisper),
@@ -155,10 +157,9 @@ impl WhisperModel {
         let (_, _, content_frames) = mel.dims3()?;
         let mut seek = 0;
         let mut all_text = Vec::new();
-        let n_frames = 3000;
 
         while seek < content_frames {
-            let segment_size = usize::min(content_frames - seek, n_frames);
+            let segment_size = usize::min(content_frames - seek, MEL_FRAMES_PER_SEGMENT);
             let mel_segment = mel.narrow(2, seek, segment_size)?;
             let segment_result = self.decode_with_fallback(&mel_segment)?;
 
