@@ -226,21 +226,9 @@ impl WhisperModel {
 
             let next_token = if temperature > 0f64 {
                 let prs = softmax(&(&logits / temperature)?, 0)?;
-                let logits_v: Vec<f32> = prs.to_vec1()?;
-                logits_v
-                    .iter()
-                    .enumerate()
-                    .max_by(|(_, u), (_, v)| u.total_cmp(v))
-                    .map(|(i, _)| u32::try_from(i).unwrap())
-                    .unwrap()
+                argmax(&prs.to_vec1()?)
             } else {
-                let logits_v: Vec<f32> = logits.to_vec1()?;
-                logits_v
-                    .iter()
-                    .enumerate()
-                    .max_by(|(_, u), (_, v)| u.total_cmp(v))
-                    .map(|(i, _)| u32::try_from(i).unwrap())
-                    .unwrap()
+                argmax(&logits.to_vec1()?)
             };
 
             tokens.push(next_token);
@@ -257,4 +245,14 @@ impl WhisperModel {
 
         Ok(text.trim_start().to_string())
     }
+}
+
+/// Return the index of the maximum value in a float slice as a u32 token id.
+#[allow(clippy::cast_possible_truncation)]
+fn argmax(v: &[f32]) -> u32 {
+    v.iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
+        .map(|(i, _)| i as u32)
+        .unwrap_or(0)
 }
