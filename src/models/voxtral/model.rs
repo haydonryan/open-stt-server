@@ -311,22 +311,12 @@ fn parse_audio_config(json: &serde_json::Value) -> Result<VoxtralEncoderConfig> 
     })
 }
 
-#[cfg(feature = "flash-attn")]
-const fn use_flash_attn() -> bool {
-    true
-}
-
-#[cfg(not(feature = "flash-attn"))]
-const fn use_flash_attn() -> bool {
-    false
-}
+const USE_FLASH_ATTN: bool = cfg!(feature = "flash-attn");
 
 fn parse_text_config(json: &serde_json::Value) -> Result<VoxtralLlamaConfig> {
     let text_json = json
         .get("text_config")
         .ok_or_else(|| anyhow::anyhow!("Missing text_config in configuration"))?;
-
-    let use_flash_attn = use_flash_attn();
 
     #[allow(clippy::cast_possible_truncation)]
     Ok(VoxtralLlamaConfig {
@@ -340,7 +330,7 @@ fn parse_text_config(json: &serde_json::Value) -> Result<VoxtralLlamaConfig> {
         rms_norm_eps:            get_f64  (text_json, "rms_norm_eps",              1e-5),
         rope_theta:              get_f64  (text_json, "rope_theta",     100_000_000.0) as f32,
         max_position_embeddings: get_usize(text_json, "max_position_embeddings", 131_072),
-        use_flash_attn,
+        use_flash_attn: USE_FLASH_ATTN,
         tie_word_embeddings:     get_bool (text_json, "attention_bias",           false),
     })
 }
