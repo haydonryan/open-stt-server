@@ -142,6 +142,14 @@ OPEN_STT_MODELS=whisper-base,whisper-large-v3 open-stt-server
 
 - Rust 1.82+ (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
 
+## Development
+
+Enable the repo's pre-commit hook to run formatting, clippy, and tests before each commit:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### Build
 
 ```bash
