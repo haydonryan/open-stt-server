@@ -1,6 +1,8 @@
 use anyhow::Result;
+use audioadapter_buffers::{direct::SequentialSliceOfVecs, owned::InterleavedOwned};
 use rubato::{
-    Resampler, SincFixedIn, SincInterpolationParameters, SincInterpolationType, WindowFunction,
+    Async, FixedAsync, Resampler, SincInterpolationParameters, SincInterpolationType,
+    WindowFunction,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -51,16 +53,20 @@ pub fn resample(
         },
     };
 
-    let mut resampler = SincFixedIn::<f32>::new(
+    let mut resampler = Async::<f32>::new_sinc(
         f64::from(to_sr) / f64::from(from_sr),
         2.0,
-        params,
+        &params,
         samples.len(),
         1,
+        FixedAsync::Input,
     )?;
 
     let waves_in = vec![samples.to_vec()];
-    let waves_out = resampler.process(&waves_in, None)?;
+    let input = SequentialSliceOfVecs::new(&waves_in, 1, samples.len())?;
+    let output_frames = resampler.process_all_needed_output_len(samples.len());
+    let mut output = InterleavedOwned::new(0.0_f32, 1, output_frames);
+    resampler.process_all_into_buffer(&input, &mut output, samples.len(), None)?;
 
-    Ok(waves_out.into_iter().next().unwrap())
+    Ok(output.take_data())
 }

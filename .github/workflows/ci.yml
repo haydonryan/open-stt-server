@@ -157,6 +157,7 @@ jobs:
     needs: [detect-release-tag]
     if: needs.detect-release-tag.outputs.tag != ''
     permissions:
+      checks: write
       contents: write
     uses: ./.github/workflows/release.yml
     with:
