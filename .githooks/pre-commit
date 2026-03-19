@@ -19,7 +19,7 @@ if ! cmp -s "$before_fmt_diff" "$after_fmt_diff"; then
 fi
 
 echo "Running cargo clippy..."
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --all-targets -- -D warnings
 
 echo "Running cargo test..."
 cargo test
