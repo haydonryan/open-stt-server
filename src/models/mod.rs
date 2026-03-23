@@ -8,11 +8,10 @@ pub mod voxtral;
 pub mod whisper;
 
 use anyhow::Result;
+#[cfg(all(feature = "candle", target_os = "macos"))]
+use candle_core::utils::metal_is_available;
 #[cfg(feature = "candle")]
-use candle_core::{
-    Device,
-    utils::{cuda_is_available, metal_is_available},
-};
+use candle_core::{Device, utils::cuda_is_available};
 #[cfg(feature = "candle")]
 use log::info;
 #[cfg(feature = "candle")]
@@ -33,6 +32,7 @@ pub fn select_device(force_cpu: bool) -> Result<Device> {
         info!("Using CPU (forced by user)");
         return Ok(Device::Cpu);
     }
+    #[cfg(target_os = "macos")]
     if metal_is_available() {
         info!("Using Metal device (Apple Silicon)");
         return Device::new_metal(0)

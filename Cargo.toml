@@ -51,8 +51,13 @@ default = ["candle"]
 candle = ["dep:candle-core", "dep:candle-nn", "dep:candle-transformers"]
 cuda = ["candle", "candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
 cudnn = ["candle", "candle-core/cudnn"]
-metal = ["candle", "candle-core/metal", "candle-nn/metal", "candle-transformers/metal"]
+metal = ["candle"]
 flash-attn = ["candle", "candle-transformers/flash-attn", "dep:candle-flash-attn"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true, features = ["metal"] }
+candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true, features = ["metal"] }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true, features = ["metal"] }
 
 [dependencies.candle-flash-attn]
 git = "https://github.com/huggingface/candle.git"
