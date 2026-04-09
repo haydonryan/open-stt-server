@@ -19,9 +19,9 @@ tower-http = { version = "0.6", features = ["trace", "cors"] }
 clap = { version = "4", features = ["derive", "env"] }
 
 # ML Framework (candle)
-candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true }
-candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true }
-candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true }
+candle-core = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true }
+candle-nn = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true }
 
 # Tokenizers
 tokenizers = "0.22"
@@ -60,11 +60,11 @@ metal = ["candle"]
 flash-attn = ["candle", "candle-transformers/flash-attn", "dep:candle-flash-attn"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true, features = ["metal"] }
-candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true, features = ["metal"] }
-candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main", optional = true, features = ["metal"] }
+candle-core = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true, features = ["metal"] }
+candle-nn = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true, features = ["metal"] }
+candle-transformers = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true, features = ["metal"] }
 
 [dependencies.candle-flash-attn]
 git = "https://github.com/huggingface/candle.git"
-branch = "main"
+rev = "c42e1fefa928335660c7877753903e59c87fd7ff"
 optional = true
