@@ -19,3 +19,6 @@ release *args:
 
 install:
     cargo install --path .
+
+docker-build:
+    ./scripts/docker-build.sh
