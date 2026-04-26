@@ -36,3 +36,9 @@ pre-commit:
 release *args:
     git pull --rebase
     cargo release {{args}}
+
+install:
+    cargo install --path .
+
+docker-build:
+    ./scripts/docker-build.sh
