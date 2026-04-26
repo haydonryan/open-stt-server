@@ -41,10 +41,10 @@ log = "0.4"
 env_logger = "0.11"
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls"] }
 semver = "1.0"
-flate2 = "1.0"
+flate2 = "1.1"
 tar = "0.4"
-zip = { version = "7.2", default-features = false, features = ["deflate"] }
-tempfile = "3.10"
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
+tempfile = "3.27"
 ring = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
