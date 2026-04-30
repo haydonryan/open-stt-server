@@ -24,7 +24,7 @@ candle-nn = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fef
 candle-transformers = { git = "https://github.com/huggingface/candle.git", rev = "c42e1fefa928335660c7877753903e59c87fd7ff", optional = true }
 
 # Tokenizers
-tokenizers = "0.22"
+tokenizers = "0.23"
 tekken-rs = "0.1"
 
 # Audio processing
