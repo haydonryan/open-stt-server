@@ -5,8 +5,8 @@ tag="${DOCKER_TAG:-$(date +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)}"
 timeout="${DOCKER_HEALTH_TIMEOUT:-180}"
 prune_age="${DOCKER_BUILDER_PRUNE_UNTIL:-168h}"
 
-export OPEN_STT_IMAGE="open-stt-server-debian:${tag}"
-
+export OPEN_STT_IMAGE="open-stt-server:${tag}"
+export COMPOSE_PROFILES="${COMPOSE_PROFILES:-debian}"
 echo "[docker-build] deploying tag ${tag}"
 docker compose up -d --build --force-recreate --remove-orphans
 
@@ -21,23 +21,17 @@ current_image_ids=()
 deadline=$((SECONDS + timeout))
 while (( SECONDS < deadline )); do
     pending=0
-    mapfile -t snapshot < <(docker inspect "${containers[@]}" | python - <<'PY2'
-import json, sys
-for doc in json.load(sys.stdin):
-    state = doc.get('State', {})
-    print('	'.join([
-        doc.get('Id', ''),
-        doc.get('Name', '').lstrip('/'),
-        state.get('Status', ''),
-        state.get('Health', {}).get('Status', 'none'),
-        doc.get('Image', ''),
-    ]))
-PY2
-)
+    snapshot_text="$(docker inspect --format $'{{.Id}}\t{{.Name}}\t{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.Image}}' "${containers[@]}")"
+    if [[ -n "$snapshot_text" ]]; then
+        mapfile -t snapshot < <(printf '%s\n' "$snapshot_text")
+    else
+        snapshot=()
+    fi
 
     current_image_ids=()
     for row in "${snapshot[@]}"; do
-        IFS=$'	' read -r container_id name state health image_id <<<"$row"
+        IFS=$'\t' read -r container_id name state health image_id <<<"$row"
+        name="${name#/}"
         current_image_ids+=("$image_id")
 
         if [[ "$state" == "exited" || "$state" == "dead" ]]; then
@@ -69,29 +63,28 @@ if [[ "$pending" -ne 0 ]]; then
     exit 1
 fi
 
-mapfile -t current_image_ids < <(printf '%s\n' "${current_image_ids[@]}" | sort -u)
+if (( ${#current_image_ids[@]} > 0 )); then
+    mapfile -t current_image_ids < <(printf '%s\n' "${current_image_ids[@]}" | sort -u)
+fi
 
 cleanup_repo() {
     local repo="$1"
     shift
     local keep_refs=("$@")
-    mapfile -t rows < <(docker image ls "$repo" --no-trunc --format json | python - <<'PY2'
-import json, sys
-for line in sys.stdin:
-    line = line.strip()
-    if not line:
-        continue
-    obj = json.loads(line)
-    repo = obj.get('Repository')
-    tag = obj.get('Tag')
-    image_id = obj.get('ID')
-    if repo and repo != '<none>' and tag and tag != '<none>' and image_id:
-        print(f"{repo}:{tag}	{image_id}")
-PY2
-)
+    local rows_text
+    rows_text="$(docker image ls "$repo" --no-trunc --format $'{{.Repository}}\t{{.Tag}}\t{{.ID}}')"
+    local rows=()
+    if [[ -n "$rows_text" ]]; then
+        mapfile -t rows < <(printf '%s\n' "$rows_text")
+    fi
 
     for row in "${rows[@]}"; do
-        IFS=$'	' read -r ref image_id <<<"$row"
+        IFS=$'\t' read -r repo_name tag_name image_id <<<"$row"
+        if [[ -z "$repo_name" || -z "$tag_name" || -z "$image_id" || "$repo_name" == "<none>" || "$tag_name" == "<none>" ]]; then
+            continue
+        fi
+
+        local ref="${repo_name}:${tag_name}"
         local keep=0
 
         for wanted in "${keep_refs[@]}"; do
@@ -118,7 +111,7 @@ PY2
     done
 }
 
-cleanup_repo "open-stt-server-debian" "${OPEN_STT_IMAGE}"
+cleanup_repo "open-stt-server" "${OPEN_STT_IMAGE}"
 
 docker image prune -f >/dev/null
 docker container prune -f >/dev/null
