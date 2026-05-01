@@ -144,10 +144,16 @@ OPEN_STT_MODELS=whisper-base,whisper-large-v3 open-stt-server
 
 ## Development
 
-Enable the repo's pre-commit hook to run formatting, clippy, and tests before each commit:
+Enable the repo's pre-commit hook to run `just pre-commit` before each commit:
 
 ```bash
 git config core.hooksPath .githooks
+```
+
+You can run the same suite manually with:
+
+```bash
+just pre-commit
 ```
 
 ### Build
