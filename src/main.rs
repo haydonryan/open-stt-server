@@ -1,3 +1,12 @@
+#![allow(
+    clippy::default_trait_access,
+    clippy::let_underscore_must_use,
+    clippy::manual_let_else,
+    clippy::needless_pass_by_ref_mut,
+    clippy::too_many_lines,
+    clippy::trivially_copy_pass_by_ref
+)]
+
 use anyhow::Result;
 use axum::{
     Router,
@@ -108,7 +117,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn binary_name() -> &'static str {
+const fn binary_name() -> &'static str {
     env!("CARGO_PKG_NAME")
 }
 
@@ -146,10 +155,7 @@ fn parse_release_version(tag_name: &str) -> Result<Version> {
 }
 
 async fn fetch_latest_release() -> Result<GitHubRelease> {
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/releases/latest",
-        GITHUB_OWNER, GITHUB_REPO
-    );
+    let url = format!("https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest");
     Ok(reqwest::Client::new()
         .get(url)
         .header(reqwest::header::USER_AGENT, "open-stt-server")
@@ -229,7 +235,7 @@ async fn update() -> Result<()> {
     let release = fetch_latest_release().await?;
     let latest = parse_release_version(&release.tag_name)?;
     if latest <= current {
-        println!("Already on the latest version ({})", current);
+        println!("Already on the latest version ({current})");
         return Ok(());
     }
     let (target, archive_ext) = target_triplet_and_archive();

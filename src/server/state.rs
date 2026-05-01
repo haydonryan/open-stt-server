@@ -49,7 +49,7 @@ impl AppState {
     /// List all loaded model names.
     pub fn model_names(&self) -> Vec<&str> {
         let mut names: Vec<&str> = self.models.keys().map(String::as_str).collect();
-        names.sort();
+        names.sort_unstable();
         names
     }
 }

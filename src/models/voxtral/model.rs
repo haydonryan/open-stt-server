@@ -111,7 +111,7 @@ impl VoxtralModel {
 
         let padded_audio = if audio.len() % CHUNK_SIZE != 0 {
             let target_samples = ((audio.len() / CHUNK_SIZE) + 1) * CHUNK_SIZE;
-            let mut padded = audio.clone();
+            let mut padded = audio;
             padded.resize(target_samples, 0.0);
             padded
         } else {

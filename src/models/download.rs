@@ -74,7 +74,7 @@ async fn download_file(model_id: &str, revision: &str, filename: &str) -> Result
 
 async fn download_and_hash(url: &str, blobs_dir: &Path) -> Result<PathBuf> {
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(3600))
+        .timeout(std::time::Duration::from_hours(1))
         .connect_timeout(std::time::Duration::from_secs(30))
         .build()?;
 
@@ -171,7 +171,7 @@ fn model_files(model: &STTModel) -> Vec<&'static str> {
     files
 }
 
-/// Download a model from HuggingFace Hub if not already cached.
+/// Download a model from `HuggingFace` Hub if not already cached.
 pub async fn ensure_model_downloaded(model: &STTModel) -> Result<()> {
     let (model_id, revision) = model.model_and_revision();
     let files = model_files(model);
@@ -186,7 +186,7 @@ pub async fn ensure_model_downloaded(model: &STTModel) -> Result<()> {
         download_file(model_id, revision, filename).await?;
     }
 
-    info!("Model {} is ready.", model);
+    info!("Model {model} is ready.");
     Ok(())
 }
 

@@ -132,18 +132,17 @@ pub async fn transcribe(
     };
 
     // Resolve model
-    let shared_model = match state.resolve_model(model_name.as_deref()) {
-        Some(m) => m.clone(),
-        None => {
-            let requested = model_name.as_deref().unwrap_or("<default>");
-            let available = state.model_names().join(", ");
-            warn!("Requested model '{requested}' is not loaded. Loaded: {available}");
-            return api_error(
-                StatusCode::BAD_REQUEST,
-                format!("Model '{requested}' is not loaded. Available: {available}"),
-                "invalid_request_error",
-            );
-        }
+    let shared_model = if let Some(m) = state.resolve_model(model_name.as_deref()) {
+        m.clone()
+    } else {
+        let requested = model_name.as_deref().unwrap_or("<default>");
+        let available = state.model_names().join(", ");
+        warn!("Requested model '{requested}' is not loaded. Loaded: {available}");
+        return api_error(
+            StatusCode::BAD_REQUEST,
+            format!("Model '{requested}' is not loaded. Available: {available}"),
+            "invalid_request_error",
+        );
     };
 
     // Decode audio
@@ -254,7 +253,7 @@ mod tests {
         AppState {
             models: Arc::new(models),
             default_model: "whisper-tiny".to_string(),
-            api_key: api_key.map(|v| v.to_string()),
+            api_key: api_key.map(std::string::ToString::to_string),
         }
     }
 

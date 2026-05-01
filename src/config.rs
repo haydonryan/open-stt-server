@@ -12,7 +12,7 @@ pub struct Config {
     pub port: u16,
 
     /// Model(s) to load at startup. Can be specified multiple times.
-    /// Set OPEN_STT_MODELS as a comma-separated list (e.g. "whisper-base,whisper-small").
+    /// Set `OPEN_STT_MODELS` as a comma-separated list (e.g. "whisper-base,whisper-small").
     #[arg(
         long = "model",
         env = "OPEN_STT_MODELS",
@@ -31,7 +31,7 @@ pub struct Config {
     #[arg(long, env = "OPEN_STT_FORCE_CPU", default_value_t = false)]
     pub force_cpu: bool,
 
-    /// Download model files from HuggingFace if not already cached.
+    /// Download model files from `HuggingFace` if not already cached.
     /// Without this flag, the server will fail to start if any model is missing.
     #[arg(long, env = "OPEN_STT_DOWNLOAD", default_value_t = false)]
     pub download: bool,

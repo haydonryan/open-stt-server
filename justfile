@@ -9,7 +9,7 @@ build:
 check:
     cargo check --workspace
     cargo fmt --all -- --check
-    cargo clippy --all-targets --features candle -- -D warnings
+    cargo clippy --all-targets --features candle -- -D warnings -W clippy::pedantic -W clippy::nursery
     cargo audit
     cargo deny check all
     cargo test --workspace
@@ -28,7 +28,7 @@ test:
 pre-commit:
     ./scripts/scan-staged-secrets.sh
     cargo fmt --all
-    cargo clippy --all-targets -- -D warnings
+    cargo clippy --all-targets --features candle -- -D warnings -W clippy::pedantic -W clippy::nursery
     cargo audit
     cargo deny check all
     cargo test
@@ -36,9 +36,6 @@ pre-commit:
 release *args:
     git pull --rebase
     cargo release {{args}}
-
-install:
-    cargo install --path .
 
 docker-build:
     ./scripts/docker-build.sh

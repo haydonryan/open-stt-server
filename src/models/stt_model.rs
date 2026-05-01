@@ -57,7 +57,7 @@ impl std::fmt::Display for STTModel {
 }
 
 impl STTModel {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::WhisperTiny => "whisper-tiny",
             Self::WhisperTinyEn => "whisper-tiny.en",
@@ -79,11 +79,11 @@ impl STTModel {
         }
     }
 
-    pub fn is_voxtral(&self) -> bool {
+    pub const fn is_voxtral(&self) -> bool {
         matches!(self, Self::VoxtralMini | Self::VoxtralSmall)
     }
 
-    pub fn model_and_revision(&self) -> (&'static str, &'static str) {
+    pub const fn model_and_revision(&self) -> (&'static str, &'static str) {
         match self {
             Self::WhisperTiny => ("openai/whisper-tiny", "main"),
             Self::WhisperTinyEn => ("openai/whisper-tiny.en", "main"),
