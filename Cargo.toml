@@ -68,3 +68,13 @@ candle-transformers = { git = "https://github.com/huggingface/candle.git", rev =
 git = "https://github.com/huggingface/candle.git"
 rev = "c42e1fefa928335660c7877753903e59c87fd7ff"
 optional = true
+
+[lints.clippy]
+dbg_macro = "deny"
+get_unwrap = "deny"
+let_underscore_must_use = "deny"
+map_err_ignore = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+unused_result_ok = "deny"
