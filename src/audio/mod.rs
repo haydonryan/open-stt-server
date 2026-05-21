@@ -1,16 +1,20 @@
 use anyhow::Result;
-use symphonia::core::audio::{AudioBufferRef, Signal};
-use symphonia::core::codecs::{CODEC_TYPE_NULL, DecoderOptions};
-use symphonia::core::conv::FromSample;
+use symphonia::core::audio::GenericAudioBufferRef;
+use symphonia::core::codecs::audio::{AudioDecoderOptions, CODEC_ID_NULL_AUDIO};
+use symphonia::core::errors::Error;
+use symphonia::core::formats::TrackType;
+use symphonia::core::formats::probe::Hint;
 use symphonia::core::io::MediaSourceStream;
+use symphonia::core::meta::MetadataOptions;
 
-fn append_mono_samples<T>(samples: &mut Vec<f32>, data: &symphonia::core::audio::AudioBuffer<T>)
-where
-    T: symphonia::core::sample::Sample,
-    f32: symphonia::core::conv::FromSample<T>,
-{
+fn append_mono_samples(samples: &mut Vec<f32>, data: &GenericAudioBufferRef<'_>) {
     // Downmix to mono (channel 0 only)
-    let converted: Vec<f32> = data.chan(0).iter().map(|v| f32::from_sample(*v)).collect();
+    let mut channels = Vec::<Vec<f32>>::new();
+    data.copy_to_vecs_planar(&mut channels);
+
+    let Some(converted) = channels.into_iter().next() else {
+        return;
+    };
 
     let max_abs = converted.iter().map(|&x| x.abs()).fold(0.0f32, f32::max);
     if max_abs > 0.0 && max_abs < 1e-3 {
@@ -26,56 +30,55 @@ pub fn decode_audio_bytes(data: &[u8]) -> Result<(Vec<f32>, u32)> {
     let cursor = std::io::Cursor::new(data.to_vec());
     let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
 
-    let hint = symphonia::core::probe::Hint::new();
-    let probed = symphonia::default::get_probe().format(
+    let hint = Hint::new();
+    let mut format = symphonia::default::get_probe().probe(
         &hint,
         mss,
-        &Default::default(),
-        &Default::default(),
+        Default::default(),
+        MetadataOptions::default(),
     )?;
 
-    let mut format = probed.format;
-
     let track = format
-        .tracks()
-        .iter()
-        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+        .default_track(TrackType::Audio)
+        .or_else(|| {
+            format.tracks().iter().find(|track| {
+                track
+                    .codec_params
+                    .as_ref()
+                    .and_then(|params| params.audio())
+                    .is_some_and(|params| params.codec != CODEC_ID_NULL_AUDIO)
+            })
+        })
         .ok_or_else(|| anyhow::anyhow!("No supported audio tracks found"))?;
 
-    let dec_opts = DecoderOptions::default();
-    let mut decoder = symphonia::default::get_codecs().make(&track.codec_params, &dec_opts)?;
+    let audio_params = track
+        .codec_params
+        .as_ref()
+        .and_then(|params| params.audio())
+        .ok_or_else(|| anyhow::anyhow!("Audio track missing codec parameters"))?;
+
+    let dec_opts = AudioDecoderOptions::default();
+    let mut decoder =
+        symphonia::default::get_codecs().make_audio_decoder(audio_params, &dec_opts)?;
 
     let track_id = track.id;
-    let sample_rate = track.codec_params.sample_rate.unwrap_or(16000);
+    let sample_rate = audio_params.sample_rate.unwrap_or(16000);
     let mut pcm_data = Vec::new();
 
     loop {
         let packet = match format.next_packet() {
-            Ok(p) => p,
-            Err(symphonia::core::errors::Error::IoError(e))
-                if e.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
-                break;
-            }
+            Ok(Some(packet)) => packet,
+            Ok(None) => break,
+            Err(Error::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
             Err(e) => return Err(e.into()),
         };
 
-        if packet.track_id() != track_id {
+        if packet.track_id != track_id {
             continue;
         }
 
-        match decoder.decode(&packet)? {
-            AudioBufferRef::F64(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::F32(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::S32(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::S16(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::S8(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::U32(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::U16(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::U8(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::U24(buf) => append_mono_samples(&mut pcm_data, &buf),
-            AudioBufferRef::S24(buf) => append_mono_samples(&mut pcm_data, &buf),
-        }
+        let decoded_audio = decoder.decode(&packet)?;
+        append_mono_samples(&mut pcm_data, &decoded_audio);
     }
 
     if pcm_data.is_empty() {
