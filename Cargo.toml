@@ -28,7 +28,7 @@ tokenizers = "0.23"
 tekken-rs = "0.1"
 
 # Audio processing
-audioadapter-buffers = "3.0"
+audioadapter-buffers = "=3.0.0"
 rubato = "3.0.0"
 symphonia = { version = "0.6", features = ["all"] }
 
