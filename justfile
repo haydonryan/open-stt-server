@@ -46,7 +46,7 @@ pre-commit:
 
 release *args:
     git pull --rebase
-    cargo release {{args}}
+    just check && cargo release {{args}}
 
 bump version:
     cargo release version {{version}} --execute --no-confirm
