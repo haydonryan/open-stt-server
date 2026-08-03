@@ -1,5 +1,5 @@
 use anyhow::Result;
-use audioadapter_buffers::{direct::SequentialSliceOfVecs, owned::InterleavedOwned};
+use rubato::audioadapter_buffers::{direct::SequentialSliceOfVecs, owned::InterleavedOwned};
 use rubato::{
     Async, FixedAsync, Resampler, SincInterpolationParameters, SincInterpolationType,
     WindowFunction,
