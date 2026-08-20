@@ -27,7 +27,7 @@ fn append_mono_samples(samples: &mut Vec<f32>, data: &GenericAudioBufferRef<'_>)
 
 /// Decode audio bytes (any format supported by symphonia) to mono PCM f32 samples.
 pub fn decode_audio_bytes(data: &[u8]) -> Result<(Vec<f32>, u32)> {
-    let cursor = std::io::Cursor::new(data.to_vec());
+    let cursor = std::io::Cursor::new(data);
     let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
 
     let hint = Hint::new();
@@ -86,4 +86,66 @@ pub fn decode_audio_bytes(data: &[u8]) -> Result<(Vec<f32>, u32)> {
     }
 
     Ok((pcm_data, sample_rate))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a minimal mono 16-bit PCM WAV in memory.
+    /// Build a minimal mono 16-bit PCM WAV in memory.
+    // WAV header fields are 16-bit; the truncating casts are inherent to the format.
+    #[allow(clippy::cast_possible_truncation)]
+    fn build_wav(sample_rate: u32, sample_count: usize) -> Vec<u8> {
+        let bits_per_sample: u32 = 16;
+        let channels: u16 = 1;
+        let block_align = u32::from(channels) * bits_per_sample / 8;
+        let byte_rate = sample_rate * block_align;
+        let data_size = (sample_count as u32) * block_align;
+
+        let mut wav = Vec::with_capacity(44 + data_size as usize);
+        wav.extend_from_slice(b"RIFF");
+        wav.extend_from_slice(&(36 + data_size).to_le_bytes());
+        wav.extend_from_slice(b"WAVE");
+        wav.extend_from_slice(b"fmt ");
+        wav.extend_from_slice(&16u32.to_le_bytes());
+        wav.extend_from_slice(&1u16.to_le_bytes()); // PCM
+        wav.extend_from_slice(&channels.to_le_bytes());
+        wav.extend_from_slice(&sample_rate.to_le_bytes());
+        wav.extend_from_slice(&byte_rate.to_le_bytes());
+        wav.extend_from_slice(&(block_align as u16).to_le_bytes());
+        wav.extend_from_slice(&(bits_per_sample as u16).to_le_bytes());
+        wav.extend_from_slice(b"data");
+        wav.extend_from_slice(&data_size.to_le_bytes());
+        let mut phase: i16 = 0;
+        for _ in 0..sample_count {
+            phase = phase.wrapping_add(997);
+            wav.extend_from_slice(&phase.to_le_bytes());
+        }
+        wav
+    }
+
+    #[test]
+    fn decodes_generated_wav_with_expected_sample_count_and_rate() {
+        let sample_rate = 8000;
+        let sample_count = 8000; // 1 second of audio
+        let wav = build_wav(sample_rate, sample_count);
+
+        let (pcm, decoded_rate) =
+            decode_audio_bytes(&wav).expect("generated WAV should decode successfully");
+
+        assert_eq!(
+            decoded_rate, sample_rate,
+            "sample rate should match the WAV header"
+        );
+        assert_eq!(
+            pcm.len(),
+            sample_count,
+            "sample count should match the generated audio"
+        );
+        assert!(
+            pcm.iter().any(|&s| s != 0.0),
+            "decoded audio should contain non-zero samples"
+        );
+    }
 }
