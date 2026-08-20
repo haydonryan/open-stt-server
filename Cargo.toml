@@ -12,7 +12,7 @@ path = "src/main.rs"
 [dependencies]
 # Web framework
 axum = { version = "0.8", features = ["multipart"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "sync", "fs", "io-util"] }
 tower-http = { version = "0.7", features = ["trace", "cors"] }
 
 # CLI & config

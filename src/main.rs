@@ -254,3 +254,50 @@ async fn update() -> Result<()> {
     println!("Updated {} from {} to {}", binary_name(), current, latest);
     Ok(())
 }
+
+#[cfg(test)]
+mod tokio_minimal_features_test {
+    use tokio::fs;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::{TcpListener, TcpStream};
+    use tokio::sync::Mutex;
+    use tokio::task::spawn_blocking;
+
+    #[tokio::test]
+    async fn minimal_feature_set_smoke() {
+        // fs feature: async file write/read
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("smoke.txt");
+        fs::write(&path, b"hello").await.unwrap();
+        let contents = fs::read(&path).await.unwrap();
+        assert_eq!(&contents, b"hello");
+
+        // sync feature: async Mutex
+        let lock = Mutex::new(0usize);
+        {
+            let mut guard = lock.lock().await;
+            *guard += 1;
+        }
+        assert_eq!(*lock.lock().await, 1);
+
+        // rt feature: spawn_blocking
+        let answer = spawn_blocking(|| 40 + 2).await.unwrap();
+        assert_eq!(answer, 42);
+
+        // net + io-util features: TCP round trip
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _peer) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 5];
+            socket.read_exact(&mut buf).await.unwrap();
+            socket.write_all(&buf).await.unwrap();
+        });
+        let mut client = TcpStream::connect(addr).await.unwrap();
+        client.write_all(b"hello").await.unwrap();
+        let mut echoed = [0u8; 5];
+        client.read_exact(&mut echoed).await.unwrap();
+        assert_eq!(&echoed, b"hello");
+        server.await.unwrap();
+    }
+}
