@@ -301,3 +301,26 @@ mod tokio_minimal_features_test {
         server.await.unwrap();
     }
 }
+
+#[cfg(test)]
+mod release_profile_test {
+    #[test]
+    fn release_profile_is_hardened() {
+        let manifest = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"))
+            .expect("Cargo.toml must be readable");
+        let profile = manifest
+            .split("[profile.release]")
+            .nth(1)
+            .and_then(|s| s.split('[').next())
+            .unwrap_or("");
+        assert!(profile.contains("lto = \"fat\""), "release lto must be fat");
+        assert!(
+            profile.contains("codegen-units = 1"),
+            "release codegen-units must be 1"
+        );
+        assert!(
+            profile.contains("strip = \"symbols\""),
+            "release strip must be symbols"
+        );
+    }
+}
