@@ -1,12 +1,3 @@
-#![allow(
-    clippy::default_trait_access,
-    clippy::let_underscore_must_use,
-    clippy::manual_let_else,
-    clippy::needless_pass_by_ref_mut,
-    clippy::too_many_lines,
-    clippy::trivially_copy_pass_by_ref
-)]
-
 use anyhow::Result;
 use axum::{
     Router,
@@ -84,7 +75,7 @@ async fn main() -> Result<()> {
         let force_cpu = cfg.force_cpu;
 
         let instance: ModelInstance =
-            tokio::task::spawn_blocking(move || load_model_blocking(&model_clone, force_cpu))
+            tokio::task::spawn_blocking(move || load_model_blocking(model_clone, force_cpu))
                 .await??;
 
         let shared: SharedModel = Arc::new(Mutex::new(instance));

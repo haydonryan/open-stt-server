@@ -64,6 +64,9 @@ pub struct TranscriptionResponse {
 /// - `prompt`          – initial prompt (accepted but not used yet)
 /// - `response_format` – "json" | "text" (default: "json")
 /// - `temperature`     – float (accepted but not used yet)
+// The handler is a linear multipart-parse + dispatch flow; splitting it
+// would harm readability more than help, so keep it as one cohesive unit.
+#[allow(clippy::too_many_lines)]
 pub async fn transcribe(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -105,7 +108,9 @@ pub async fn transcribe(
                     }
                     // Accept but ignore: language, prompt, temperature
                     _ => {
-                        let _ = field.bytes().await;
+                        if let Err(e) = field.bytes().await {
+                            warn!("Failed to read ignored multipart field: {e}");
+                        }
                     }
                 }
             }
@@ -120,15 +125,12 @@ pub async fn transcribe(
         }
     }
 
-    let audio_bytes = match audio_bytes {
-        Some(b) => b,
-        None => {
-            return api_error(
-                StatusCode::BAD_REQUEST,
-                "Missing required field: file",
-                "invalid_request_error",
-            );
-        }
+    let Some(audio_bytes) = audio_bytes else {
+        return api_error(
+            StatusCode::BAD_REQUEST,
+            "Missing required field: file",
+            "invalid_request_error",
+        );
     };
 
     // Resolve model

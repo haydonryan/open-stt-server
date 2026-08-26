@@ -76,7 +76,7 @@ impl ModelInstance {
 
 /// Load a model synchronously (blocking). Call from a `spawn_blocking` context.
 #[cfg(feature = "candle")]
-pub fn load_model_blocking(model: &STTModel, force_cpu: bool) -> Result<ModelInstance> {
+pub fn load_model_blocking(model: STTModel, force_cpu: bool) -> Result<ModelInstance> {
     if model.is_voxtral() {
         let m = VoxtralModel::new(model, force_cpu)?;
         Ok(ModelInstance::Voxtral(Box::new(m)))
@@ -106,7 +106,7 @@ impl ModelInstance {
 
 /// Load a model synchronously (blocking). Call from a `spawn_blocking` context.
 #[cfg(not(feature = "candle"))]
-pub fn load_model_blocking(_model: &STTModel, _force_cpu: bool) -> Result<ModelInstance> {
+pub fn load_model_blocking(_model: STTModel, _force_cpu: bool) -> Result<ModelInstance> {
     Err(anyhow::anyhow!(
         "Model support is disabled. Rebuild with the `candle` feature enabled."
     ))
