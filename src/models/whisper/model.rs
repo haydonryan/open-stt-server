@@ -57,7 +57,7 @@ pub struct WhisperModel {
 }
 
 impl WhisperModel {
-    pub fn new(stt_model: &STTModel, force_cpu: bool) -> Result<Self> {
+    pub fn new(stt_model: STTModel, force_cpu: bool) -> Result<Self> {
         info!("Loading Whisper {stt_model:?} model...");
 
         let device = crate::models::select_device(force_cpu)?;

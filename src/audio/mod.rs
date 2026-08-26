@@ -2,9 +2,9 @@ use anyhow::Result;
 use symphonia::core::audio::GenericAudioBufferRef;
 use symphonia::core::codecs::audio::{AudioDecoderOptions, CODEC_ID_NULL_AUDIO};
 use symphonia::core::errors::Error;
-use symphonia::core::formats::TrackType;
 use symphonia::core::formats::probe::Hint;
-use symphonia::core::io::MediaSourceStream;
+use symphonia::core::formats::{FormatOptions, TrackType};
+use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
 use symphonia::core::meta::MetadataOptions;
 
 fn append_mono_samples(samples: &mut Vec<f32>, data: &GenericAudioBufferRef<'_>) {
@@ -28,13 +28,13 @@ fn append_mono_samples(samples: &mut Vec<f32>, data: &GenericAudioBufferRef<'_>)
 /// Decode audio bytes (any format supported by symphonia) to mono PCM f32 samples.
 pub fn decode_audio_bytes(data: &[u8]) -> Result<(Vec<f32>, u32)> {
     let cursor = std::io::Cursor::new(data);
-    let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
+    let mss = MediaSourceStream::new(Box::new(cursor), MediaSourceStreamOptions::default());
 
     let hint = Hint::new();
     let mut format = symphonia::default::get_probe().probe(
         &hint,
         mss,
-        Default::default(),
+        FormatOptions::default(),
         MetadataOptions::default(),
     )?;
 

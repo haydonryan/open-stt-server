@@ -47,7 +47,7 @@ pub struct VoxtralModel {
 }
 
 impl VoxtralModel {
-    pub fn new(stt_model: &STTModel, force_cpu: bool) -> Result<Self> {
+    pub fn new(stt_model: STTModel, force_cpu: bool) -> Result<Self> {
         info!("Loading Voxtral {stt_model:?} model...");
 
         let device = crate::models::select_device(force_cpu)?;
@@ -101,7 +101,7 @@ impl VoxtralModel {
         })
     }
 
-    pub fn transcribe_audio(&mut self, audio_data: &[f32], sample_rate: u32) -> Result<String> {
+    pub fn transcribe_audio(&self, audio_data: &[f32], sample_rate: u32) -> Result<String> {
         let audio = if sample_rate == SAMPLE_RATE {
             audio_data.to_vec()
         } else {

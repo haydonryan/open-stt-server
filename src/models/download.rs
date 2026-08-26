@@ -2,12 +2,13 @@ use anyhow::Result;
 use futures::StreamExt;
 use log::{info, warn};
 use ring::digest::{Context, SHA256};
-use std::fmt::Write as FmtWrite;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
 use crate::models::stt_model::STTModel;
+
+const HEX: &[u8; 16] = b"0123456789abcdef";
 
 fn get_hf_url(model_id: &str, revision: &str, filename: &str) -> String {
     format!("https://huggingface.co/{model_id}/resolve/{revision}/{filename}")
@@ -118,15 +119,21 @@ async fn download_and_hash(url: &str, blobs_dir: &Path) -> Result<PathBuf> {
     drop(file);
 
     let digest = hasher.finish();
-    let hash_hex = digest.as_ref().iter().fold(String::new(), |mut output, b| {
-        let _ = write!(output, "{b:02x}");
-        output
-    });
+    let mut hash_hex = String::with_capacity(digest.as_ref().len() * 2);
+    for b in digest.as_ref() {
+        hash_hex.push(HEX[(b >> 4) as usize] as char);
+        hash_hex.push(HEX[(b & 0x0f) as usize] as char);
+    }
     let final_path = blobs_dir.join(hash_hex);
 
     match fs::metadata(&final_path).await {
         Ok(md) if md.len() > 0 => {
-            let _ = fs::remove_file(&temp_path).await;
+            if let Err(e) = fs::remove_file(&temp_path).await {
+                warn!(
+                    "Failed to remove temporary download {}: {e}",
+                    temp_path.display()
+                );
+            }
         }
         _ => {
             if let Some(parent) = final_path.parent() {
@@ -139,7 +146,7 @@ async fn download_and_hash(url: &str, blobs_dir: &Path) -> Result<PathBuf> {
     Ok(final_path)
 }
 
-fn model_files(model: &STTModel) -> Vec<&'static str> {
+fn model_files(model: STTModel) -> Vec<&'static str> {
     let mut files: Vec<&'static str> = if model.is_voxtral() {
         vec!["config.json", "tekken.json"]
     } else {
@@ -174,7 +181,7 @@ fn model_files(model: &STTModel) -> Vec<&'static str> {
 /// Download a model from `HuggingFace` Hub if not already cached.
 pub async fn ensure_model_downloaded(model: &STTModel) -> Result<()> {
     let (model_id, revision) = model.model_and_revision();
-    let files = model_files(model);
+    let files = model_files(*model);
 
     info!(
         "Ensuring model {} is downloaded ({} files)...",
@@ -191,7 +198,7 @@ pub async fn ensure_model_downloaded(model: &STTModel) -> Result<()> {
 }
 
 /// Get cached file paths for a model. Returns an error if any file is missing.
-pub fn get_model_file_paths(model: &STTModel) -> Result<Vec<PathBuf>> {
+pub fn get_model_file_paths(model: STTModel) -> Result<Vec<PathBuf>> {
     let (model_id, revision) = model.model_and_revision();
     model_files(model)
         .iter()
@@ -204,4 +211,27 @@ pub fn get_model_file_paths(model: &STTModel) -> Result<Vec<PathBuf>> {
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn model_files_include_config_and_matching_safetensors() {
+        assert_eq!(
+            model_files(STTModel::WhisperLargeV3),
+            vec!["config.json", "tokenizer.json", "model.safetensors"]
+        );
+
+        assert_eq!(
+            model_files(STTModel::VoxtralMini),
+            vec![
+                "config.json",
+                "tekken.json",
+                "model-00001-of-00002.safetensors",
+                "model-00002-of-00002.safetensors",
+            ]
+        );
+    }
 }
