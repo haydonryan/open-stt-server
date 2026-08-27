@@ -1,52 +1,26 @@
 use std::str::FromStr;
 
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    Hash,
-    clap::ValueEnum,
-    serde::Serialize,
-    serde::Deserialize,
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
 )]
 pub enum STTModel {
-    #[value(name = "whisper-tiny")]
     #[default]
     WhisperTiny,
-    #[value(name = "whisper-tiny.en")]
     WhisperTinyEn,
-    #[value(name = "whisper-base")]
     WhisperBase,
-    #[value(name = "whisper-base.en")]
     WhisperBaseEn,
-    #[value(name = "whisper-small")]
     WhisperSmall,
-    #[value(name = "whisper-small.en")]
     WhisperSmallEn,
-    #[value(name = "whisper-medium")]
     WhisperMedium,
-    #[value(name = "whisper-medium.en")]
     WhisperMediumEn,
-    #[value(name = "whisper-large")]
     WhisperLarge,
-    #[value(name = "whisper-large-v2")]
     WhisperLargeV2,
-    #[value(name = "whisper-large-v3")]
     WhisperLargeV3,
-    #[value(name = "whisper-large-v3-turbo")]
     WhisperLargeV3Turbo,
-    #[value(name = "whisper-distil-medium.en")]
     WhisperDistilMediumEn,
-    #[value(name = "whisper-distil-large-v2")]
     WhisperDistilLargeV2,
-    #[value(name = "whisper-distil-large-v3")]
     WhisperDistilLargeV3,
-    #[value(name = "voxtral-mini")]
     VoxtralMini,
-    #[value(name = "voxtral-small")]
     VoxtralSmall,
 }
 

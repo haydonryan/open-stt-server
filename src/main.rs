@@ -3,7 +3,6 @@ use axum::{
     Router,
     routing::{get, post},
 };
-use clap::Parser;
 use flate2::read::GzDecoder;
 use log::info;
 use semver::Version;
@@ -19,13 +18,63 @@ use tokio::sync::Mutex;
 use zip::ZipArchive;
 
 mod audio;
-mod config;
 mod models;
 mod server;
 
-use config::Config;
 use models::{ModelInstance, SharedModel, load_model_blocking, stt_model::STTModel};
 use server::{routes, state::AppState};
+
+use argy::FromArgs;
+
+/// A Whisper-compatible STT API server.
+///
+/// All options can also be set via environment variables (shown in brackets).
+//
+// `Config` is intentionally non-`pub`: argy's `FromArgs` derive cannot be
+// applied to a `pub` struct (it would leak the generated flatten-contribution
+// type, error E0446). It lives at the crate root where `main` uses it.
+#[derive(FromArgs, Debug, Clone)]
+struct Config {
+    /// port to listen on.
+    #[argy(option, env = "OPEN_STT_PORT", default = "8080")]
+    pub port: u16,
+
+    /// model(s) to load at startup. Can be specified multiple times.
+    /// Set `OPEN_STT_MODELS` as a comma-separated list (e.g. "whisper-base,whisper-small").
+    #[argy(option, long = "model", value_delimiter = ',')]
+    pub models: Vec<STTModel>,
+
+    /// default model to use when the request does not specify one,
+    /// or when the requested model is not loaded. Defaults to the first
+    /// model in --model list.
+    #[argy(option, env = "OPEN_STT_DEFAULT_MODEL")]
+    pub default_model: Option<STTModel>,
+
+    /// force CPU inference even if CUDA is available.
+    #[argy(switch, env = "OPEN_STT_FORCE_CPU")]
+    pub force_cpu: bool,
+
+    /// download model files from `HuggingFace` if not already cached.
+    /// Without this flag, the server will fail to start if any model is missing.
+    #[argy(switch, env = "OPEN_STT_DOWNLOAD")]
+    pub download: bool,
+
+    /// optional API key. If set, all requests must include
+    /// "Authorization: Bearer <key>" header.
+    #[argy(option, env = "OPEN_STT_API_KEY")]
+    pub api_key: Option<String>,
+
+    /// log level (error, warn, info, debug, trace).
+    #[argy(option, env = "RUST_LOG", default = "String::from(\"info\")")]
+    pub log_level: String,
+}
+
+impl Config {
+    /// Returns the effective default model (first in list if not explicitly set).
+    fn effective_default_model(&self) -> STTModel {
+        self.default_model.unwrap_or_else(|| self.models[0])
+    }
+}
 
 const GITHUB_OWNER: &str = "haydonryan";
 const GITHUB_REPO: &str = "open-stt-server";
@@ -48,7 +97,26 @@ async fn main() -> Result<()> {
         update().await?;
         return Ok(());
     }
-    let cfg = Config::parse();
+    let mut cfg: Config = argy::from_env();
+    // argy cannot attach `env` to a repeating (Vec) option, so source the
+    // OPEN_STT_MODELS comma-separated list manually (clap parity).
+    if cfg.models.is_empty()
+        && let Ok(raw) = std::env::var("OPEN_STT_MODELS")
+    {
+        for part in raw.split(',') {
+            let part = part.trim();
+            if !part.is_empty() {
+                cfg.models.push(part.parse().unwrap_or_else(|e| {
+                    eprintln!("error: invalid value in OPEN_STT_MODELS: {e}");
+                    std::process::exit(2);
+                }));
+            }
+        }
+    }
+    if cfg.models.is_empty() {
+        eprintln!("error: the following required arguments were not provided: --model <model>");
+        std::process::exit(2);
+    }
 
     // Initialise logging
     env_logger::Builder::new()
@@ -313,5 +381,73 @@ mod release_profile_test {
             profile.contains("strip = \"symbols\""),
             "release strip must be symbols"
         );
+    }
+}
+
+#[cfg(test)]
+mod config_tests {
+    use super::*;
+
+    #[test]
+    fn parses_models_from_comma_separated_flag() {
+        let cfg = Config::from_args(
+            &["open-stt-server"],
+            &["--model", "whisper-tiny,whisper-base"],
+        )
+        .expect("should parse");
+        assert_eq!(
+            cfg.models,
+            vec![STTModel::WhisperTiny, STTModel::WhisperBase]
+        );
+        assert_eq!(cfg.port, 8080);
+        assert_eq!(cfg.log_level, "info");
+    }
+
+    #[test]
+    fn parses_repeated_model_flags() {
+        let cfg = Config::from_args(
+            &["open-stt-server"],
+            &["--model", "whisper-tiny", "--model", "whisper-base"],
+        )
+        .expect("should parse");
+        assert_eq!(
+            cfg.models,
+            vec![STTModel::WhisperTiny, STTModel::WhisperBase]
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_model() {
+        let err =
+            Config::from_args(&["open-stt-server"], &["--model", "whisper-ultra"]).unwrap_err();
+        assert!(err.output.contains("Unknown model"));
+    }
+
+    #[test]
+    fn effective_default_model_falls_back_to_first_model() {
+        let config = Config {
+            port: 8080,
+            models: vec![STTModel::WhisperTiny, STTModel::WhisperBase],
+            default_model: None,
+            force_cpu: false,
+            download: false,
+            api_key: None,
+            log_level: "info".to_string(),
+        };
+        assert_eq!(config.effective_default_model(), STTModel::WhisperTiny);
+    }
+
+    #[test]
+    fn effective_default_model_prefers_explicit_setting() {
+        let config = Config {
+            port: 8080,
+            models: vec![STTModel::WhisperTiny, STTModel::WhisperBase],
+            default_model: Some(STTModel::WhisperBase),
+            force_cpu: false,
+            download: false,
+            api_key: None,
+            log_level: "info".to_string(),
+        };
+        assert_eq!(config.effective_default_model(), STTModel::WhisperBase);
     }
 }
