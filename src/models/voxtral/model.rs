@@ -39,8 +39,6 @@ pub struct VoxtralModel {
     model: VoxtralForConditionalGeneration,
     tokenizer: Tekkenizer,
     device: Device,
-    #[allow(dead_code)]
-    config: VoxtralConfig,
     audio_token_id: usize,
     mel_filters: Vec<f32>,
     cache: VoxtralCache,
@@ -94,7 +92,6 @@ impl VoxtralModel {
             model,
             tokenizer,
             device,
-            config,
             audio_token_id,
             mel_filters,
             cache,
@@ -121,7 +118,7 @@ impl VoxtralModel {
         let audio_features =
             audio::extract_features(&padded_audio, &self.mel_filters, &self.device)?;
 
-        let (result, _tokens) = transcribe_with_voxtral(
+        let result = transcribe_with_voxtral(
             &self.model,
             &self.tokenizer,
             &audio_features,
@@ -141,7 +138,7 @@ fn transcribe_with_voxtral(
     audio_token_id: usize,
     device: &Device,
     cache: &VoxtralCache,
-) -> Result<(String, Vec<u32>)> {
+) -> Result<String> {
     let audio_dims = audio_features.dims();
     if audio_dims.len() != 3 {
         return Err(anyhow::anyhow!(
@@ -201,7 +198,7 @@ fn transcribe_with_voxtral(
 
     let transcription = post_process_transcription(&decoded_text).unwrap_or(decoded_text);
 
-    Ok((transcription, new_tokens.to_vec()))
+    Ok(transcription)
 }
 
 fn post_process_transcription(text: &str) -> Option<String> {
