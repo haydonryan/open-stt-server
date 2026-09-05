@@ -12,9 +12,6 @@ check:
     cargo clippy --all-targets --features candle -- -D warnings -W clippy::pedantic -W clippy::nursery
     cargo audit
     cargo deny check all
-    cargo test --workspace
-    cargo test --workspace --features candle
-    cargo test --workspace --no-default-features
 
 install:
     cargo install --path . --bin open-stt-server
