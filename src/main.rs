@@ -245,7 +245,7 @@ fn extract_release_asset(archive_path: &Path, output_path: &Path) -> Result<()> 
         let mut archive = ZipArchive::new(file)?;
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i)?;
-            let name = entry.name().to_string();
+            let name = entry.name()?.to_string();
             if Path::new(&name).file_name().and_then(|s| s.to_str()) == Some(binary_name()) {
                 let mut output = fs::File::create(output_path)?;
                 io::copy(&mut entry, &mut output)?;
