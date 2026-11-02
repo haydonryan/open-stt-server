@@ -46,6 +46,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
+      - name: Cache cargo build artifacts
+        uses: Swatinem/rust-cache@v2
       - name: Print Cargo Version
         run: cargo -V
       - name: Default features
@@ -150,6 +152,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Cache cargo build artifacts
+        uses: Swatinem/rust-cache@v2
       - name: Check formatting
         if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --all -- --check
