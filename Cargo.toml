@@ -15,7 +15,7 @@ axum = { version = "0.8", features = ["multipart"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "sync", "fs", "io-util"] }
 tower-http = { version = "0.7", features = ["trace", "cors"] }
 
-argy = "0.1.20"
+argy = "0.1.21"
 
 # ML Framework (candle)
 candle-core = { git = "https://github.com/huggingface/candle.git", rev = "cfcbd7186d13271843ce7eb41d25659bd0835850", optional = true }
