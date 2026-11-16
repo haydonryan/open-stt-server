@@ -60,3 +60,9 @@ docker-build:
 deploy:
     just docker-build
     docker compose up -d --force-recreate --remove-orphans
+
+nemotron-build:
+    docker build -f Dockerfile.nemotron -t ${NEMOTRON_IMAGE:-open-stt-server:nemotron} .
+
+nemotron-deploy:
+    docker compose --profile nemotron up -d --force-recreate

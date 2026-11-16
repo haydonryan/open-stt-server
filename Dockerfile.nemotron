@@ -1,0 +1,29 @@
+# Self-contained CPU Nemotron Speech Streaming ASR service.
+# The 2.47 GB .nemo checkpoint is mounted at /models rather than baked into the
+# image; ffmpeg is installed for multipart upload decoding.
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY nemotron/requirements.txt ./nemotron/requirements.txt
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.15.0+cpu \
+    && pip install --no-cache-dir -r ./nemotron/requirements.txt
+
+COPY nemotron ./nemotron
+
+ENV PYTHONUNBUFFERED=1 \
+    NEMOTRON_HOST=0.0.0.0 \
+    NEMOTRON_PORT=8080 \
+    NEMOTRON_CHECKPOINT=/models/nemotron-speech-streaming-en-0.6b.nemo \
+    NEMOTRON_DEVICE=cpu \
+    NEMOTRON_THREADS=8 \
+    NEMOTRON_MAX_UPLOAD_MB=25 \
+    NEMOTRON_MODEL_ALIAS=whisper-1
+
+EXPOSE 8080
+
+CMD ["python", "-m", "nemotron.server"]

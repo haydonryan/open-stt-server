@@ -72,6 +72,70 @@ services:
     profiles:
       - alpine
 
+  # Nemotron Speech Streaming sidecar (Voxtral-compatible ASR API).
+  # Mirrors the production runtime: backend alias voxtral-realtime, port
+  # 10082:8000, both Traefik routers, CPU8/mem12g, and a /health check.
+  nemotron:
+    build:
+      context: .
+      dockerfile: Dockerfile.nemotron
+    image: ${NEMOTRON_IMAGE:-open-stt-server:nemotron}
+    container_name: nemotron-asr
+    restart: unless-stopped
+    environment:
+      NEMOTRON_HOST: "0.0.0.0"
+      NEMOTRON_PORT: "8000"
+      NEMOTRON_DEVICE: "${NEMOTRON_DEVICE:-cpu}"
+      NEMOTRON_THREADS: "8"
+      NEMOTRON_MODEL_ALIAS: "whisper-1"
+      NEMOTRON_CHECKPOINT: "/models/nemotron-speech-streaming-en-0.6b.nemo"
+      NEMOTRON_MAX_UPLOAD_MB: "25"
+      NEMOTRON_MAX_PENDING_HTTP: "2"
+      NEMOTRON_GATE_TIMEOUT_S: "30"
+      NEMOTRON_DECODE_TIMEOUT_S: "120"
+      NEMOTRON_MAX_FIELD_BYTES: "4096"
+      OMP_NUM_THREADS: "8"
+      MKL_NUM_THREADS: "8"
+    volumes:
+      - "${NEMOTRON_MODELS_DIR:-/mnt/warp-shared/huggingface-cache/hub/asr-benchmark-nemotron}:/models:ro"
+    ports:
+      - "${NEMOTRON_HOST_PORT:-10082}:8000"
+    cpus: 8
+    mem_limit: 12g
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
+      interval: 20s
+      timeout: 6s
+      retries: 3
+      start_period: 180s
+    networks:
+      backend:
+        aliases:
+          - voxtral-realtime
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=backend
+      - traefik.http.routers.voxtral-realtime.entrypoints=websecure
+      - traefik.http.routers.voxtral-realtime.rule=Host(`realtime-speech.lab.hnrglobal.com`)
+      - traefik.http.routers.voxtral-realtime.tls=true
+      - traefik.http.services.voxtral-realtime.loadbalancer.server.port=8000
+      - traefik.http.routers.voxtral-speech.rule=Host(`speech.lab.hnrglobal.com`)
+      - traefik.http.routers.voxtral-speech.entrypoints=websecure
+      - traefik.http.routers.voxtral-speech.tls=true
+      - traefik.http.routers.voxtral-speech.service=voxtral-realtime
+      - traefik.http.routers.voxtral-realtime.service=voxtral-realtime
+    profiles:
+      - nemotron
+
 volumes:
   hf_cache:
     driver: local
+
+networks:
+  backend:
+    name: backend
+    external: true
