@@ -141,7 +141,7 @@ jobs:
           body-path: coverage-comment.md
 
   Lint:
-    name: Lint
+    name: Lint (fmt + clippy)
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest"]
