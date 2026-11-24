@@ -1,0 +1,8 @@
+# CUDA kernel builds compile every candle-flash-attn/candle-kernels source with
+# nvcc; the host compiler writes large temporary files into the disk-backed
+# /tmp, exhausting the CI worker's writable disk (ENOSPC) during
+# `cargo clippy --all-targets --all-features`. Route nvcc through a wrapper that
+# points TMPDIR at RAM-backed /dev/shm so CUDA build temporaries never consume
+# the container's disk quota. Non-CUDA builds never invoke this wrapper.
+[env]
+NVCC = { value = "scripts/nvcc-tmpdir-wrapper.sh", relative = true }
